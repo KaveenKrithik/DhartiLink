@@ -10,6 +10,7 @@ import { Gavel } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import dynamic from "next/dynamic"
+import { useSoundManager } from "@/components/sound-manager"
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCVzTgaYCdrtau2c8WkVQSJjaruwjqDu1k"
 
@@ -56,6 +57,15 @@ export default function MapHologramSection() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const sectionRef = useRef<HTMLElement | null>(null)
   const attachedElRef = useRef<HTMLInputElement | null>(null)
+  
+  const {
+    playMapSearch,
+    playMapZoom,
+    playParcelSelect,
+    playHover,
+    playButtonClick,
+    playInputFocus,
+  } = useSoundManager()
 
   const ownerRef = useRef<HTMLInputElement | null>(null)
   const addrRef = useRef<HTMLInputElement | null>(null)
@@ -433,6 +443,7 @@ export default function MapHologramSection() {
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault?.()
+    playMapSearch()
     setSearchError(null)
     const owner = ownerRef.current?.value?.trim() || ""
     const addr = addrRef.current?.value?.trim() || ""
@@ -521,11 +532,23 @@ export default function MapHologramSection() {
             <form onSubmit={handleSearch} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="parcel">Parcel ID</Label>
-                <Input ref={parcelRef} id="parcel" placeholder="KA-BLR-1002" className="holo-border" />
+                <Input 
+                  ref={parcelRef} 
+                  id="parcel" 
+                  placeholder="KA-BLR-1002" 
+                  className="holo-border" 
+                  onFocus={playInputFocus}
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="owner">Owner Name</Label>
-                <Input ref={ownerRef} id="owner" placeholder="e.g., Rahul" className="holo-border" />
+                <Input 
+                  ref={ownerRef} 
+                  id="owner" 
+                  placeholder="e.g., Rahul" 
+                  className="holo-border" 
+                  onFocus={playInputFocus}
+                />
               </div>
               <div className="flex flex-col gap-2 md:col-span-1">
                 <Label htmlFor="address">Address / Area</Label>
@@ -535,10 +558,16 @@ export default function MapHologramSection() {
                   placeholder="Enter address or area"
                   className="holo-border"
                   aria-autocomplete="list"
+                  onFocus={playInputFocus}
                 />
               </div>
               <div className="md:col-span-3 flex justify-end pt-2">
-                <Button type="submit" className="holo-glow">
+                <Button 
+                  type="submit" 
+                  className="holo-glow"
+                  onMouseEnter={playHover}
+                  onClick={playButtonClick}
+                >
                   Search
                 </Button>
               </div>

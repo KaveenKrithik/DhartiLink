@@ -22,7 +22,15 @@ export function WalletConnect() {
   } = useWalletContext()
 
   const [isConnecting, setIsConnecting] = useState(false)
-  const { playButtonClick, playWalletConnect } = useSoundManager()
+  const { 
+    playButtonClick, 
+    playWalletConnect, 
+    playWalletDisconnect,
+    playHover,
+    playCardHover,
+    playSuccess,
+    playError,
+  } = useSoundManager()
 
   const createConnectSound = () => {
     try {
@@ -134,11 +142,12 @@ export function WalletConnect() {
           <p className="text-sm text-muted-foreground">
             Connect your MetaMask wallet to access DhartiLink features
           </p>
-          <Button 
-            onClick={handleConnect} 
-            disabled={isConnecting}
-            className="w-full"
-          >
+        <Button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          className="w-full"
+          onMouseEnter={playHover}
+        >
             {isConnecting ? 'Connecting...' : 'Connect MetaMask'}
           </Button>
           {error && (
@@ -212,6 +221,7 @@ export function WalletConnect() {
             size="sm"
             onClick={handleDisconnect}
             className="flex-1"
+            onMouseEnter={playHover}
           >
             <LogOut className="h-3 w-3 mr-1" />
             Disconnect

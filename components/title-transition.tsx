@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useSoundManager } from "@/components/sound-manager"
 
 export default function TitleTransition() {
   const [idx, setIdx] = useState(0)
@@ -9,6 +10,8 @@ export default function TitleTransition() {
   const [showMainTitle, setShowMainTitle] = useState(false)
   const [isDrifting, setIsDrifting] = useState(false)
   const titleRef = useRef<HTMLDivElement | null>(null)
+  
+  const { playLanguageChange, playHoloBeep } = useSoundManager()
 
   const dhartiTranslations = useMemo(
     () => [
@@ -43,6 +46,7 @@ export default function TitleTransition() {
   useEffect(() => {
     const i = setInterval(() => {
       setBlink(true)
+      playLanguageChange()
       setTimeout(() => {
         setIdx((p) => (p + 1) % dhartiTranslations.length)
         setBlink(false)

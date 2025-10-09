@@ -1,16 +1,20 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Howl } from "howler"
+import { useSoundManager } from "@/components/sound-manager"
 
 export default function EntryLoader() {
   const [visible, setVisible] = useState(true)
   const [idx, setIdx] = useState(0)
   const [blink, setBlink] = useState(false)
   const [progress, setProgress] = useState(0)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const rafRef = useRef<number | null>(null)
-  const soundRef = useRef<Howl | null>(null)
+  
+  const {
+    playLoadingStart,
+    playLoadingComplete,
+    playLanguageChange,
+    playHoloBeep,
+  } = useSoundManager()
 
   const dhartiTranslations = useMemo(
     () => ["Dharti", "धरती", "தர்தி", "ధర్తి", "Dharti", "Dharti"],
@@ -61,21 +65,27 @@ export default function EntryLoader() {
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 4000)
+    // Play loading start sound
+    playLoadingStart()
     
-    // Progress animation
+    const t = setTimeout(() => {
+      playLoadingComplete()
+      setVisible(false)
+    }, 4000)
+    
+    // Progress animation - start immediately
     const progressInterval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = prev + 1
-        return newProgress > 100 ? 100 : newProgress
+        const newProgress = prev + 2.5 // 4000ms / 100 = 40ms per 2.5%
+        return newProgress >= 100 ? 100 : newProgress
       })
-    }, 40) // 4000ms / 100 = 40ms per 1%
+    }, 100) // Update every 100ms
     
     return () => {
       clearTimeout(t)
       clearInterval(progressInterval)
     }
-  }, [])
+  }, [playLoadingStart, playLoadingComplete])
 
   useEffect(() => {
     const createTransitionSound = () => {
@@ -105,7 +115,7 @@ export default function EntryLoader() {
     const i = setInterval(() => {
       setBlink(true)
       // Play transition sound on language change
-      createTransitionSound()
+      playLanguageChange()
       setTimeout(() => {
         setIdx((p) => (p + 1) % dhartiTranslations.length)
         setBlink(false)
@@ -157,15 +167,20 @@ export default function EntryLoader() {
               </span>
             </h1>
           </div>
-          <div className="mx-auto mt-12 h-1 w-40 overflow-hidden rounded-full bg-gray-800">
-            <div 
-              className="h-full transition-all duration-75 ease-out"
-              style={{ 
-                width: `${progress}%`,
-                background: 'linear-gradient(90deg, #00e5ff, #6cf2ff)',
-                boxShadow: '0 0 8px rgba(0, 229, 255, 0.5)'
-              }}
-            />
+          <div className="mx-auto mt-12 w-48">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-800/50">
+              <div 
+                className="h-full transition-all duration-100 ease-out"
+                style={{ 
+                  width: `${progress}%`,
+                  background: 'linear-gradient(90deg, #00e5ff, #6cf2ff)',
+                  boxShadow: '0 0 12px rgba(0, 229, 255, 0.8)'
+                }}
+              />
+            </div>
+            <div className="mt-2 text-xs text-gray-400 text-center">
+              {Math.round(progress)}%
+            </div>
           </div>
         </div>
       </div>
