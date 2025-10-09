@@ -149,6 +149,16 @@ export default function MainPageContent() {
                   </div>
                 </CardContent>
               </Card>
+              
+              {/* Go to Wallet Button */}
+              <div className="mt-4">
+                <button
+                  onClick={() => window.location.href = '/wallet'}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5"
+                >
+                  Go to Wallet
+                </button>
+              </div>
             </div>
           </TabsContent>
           
