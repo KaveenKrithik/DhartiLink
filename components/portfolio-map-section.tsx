@@ -66,7 +66,7 @@ export default function PortfolioMapSection() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {purchasedLands.map((land) => (
+              {purchasedLands.map((land, index) => (
                 <div 
                   key={land.id} 
                   className="p-4 bg-gray-900/30 rounded-lg border border-gray-700 hover:border-blue-500/50 transition-colors cursor-pointer"
@@ -74,10 +74,20 @@ export default function PortfolioMapSection() {
                   onMouseEnter={playCardHover}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-blue-50 font-semibold text-sm">{land.title}</h4>
+                    <h4 className="text-blue-50 font-semibold text-sm">Land {index + 1}</h4>
                     <Badge className="bg-green-600 text-xs">Owned</Badge>
                   </div>
                   <p className="text-xs text-gray-400 mb-2">{land.area} • {land.location}</p>
+                  {(land as any).coordinates && Array.isArray((land as any).coordinates) && (
+                    <p className="text-xs text-gray-500 mb-2">
+                      Coordinates: {(land as any).coordinates.map((c: any) => `${c.lat}, ${c.lon}`).join(' · ')}
+                    </p>
+                  )}
+                  {(land as any).sourceFile && (
+                    <p className="text-xs text-gray-500 mb-2">
+                      Source: {(land as any).sourceFile}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500 mb-3">
                     Owner: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'You'}
                   </p>
