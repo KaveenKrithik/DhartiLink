@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import HologramPanel, { type Parcel } from "./hologram-panel"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Gavel } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import dynamic from "next/dynamic"
@@ -60,6 +61,7 @@ export default function MapHologramSection() {
   const addrRef = useRef<HTMLInputElement | null>(null)
   const parcelRef = useRef<HTMLInputElement | null>(null)
   const autocompleteRef = useRef<any>(null)
+  const placeResultRef = useRef<any>(null)
 
   const [selected, setSelected] = useState<Parcel | null>(null)
   const [visible, setVisible] = useState(false)
@@ -112,11 +114,112 @@ export default function MapHologramSection() {
         docDigest: `0x${btoa(id).slice(0, 6)}…${btoa(owner).slice(-6)}`,
       },
     })
-    return [
+
+    const features: FeatureRecord[] = []
+    // Seed a few hand-placed parcels
+    features.push(
       mk("KA-BLR-1001", "Anita Rao", 0.0, 0.0, 980),
       mk("KA-BLR-1002", "Rahul Singh", 0.004, 0.003, 1125),
       mk("KA-BLR-1003", "Lalita Mehta", -0.004, -0.0035, 870),
+    )
+
+    // Deterministic grid of parcels around the base (up to ~50 total)
+    const ownerNames = [
+      "Arjun Rao", "Meera Nair", "Kiran Reddy", "Priya Sharma", "Vikas Gupta",
+      "Ananya Sharma", "Rohit Kumar", "Neha Verma", "Sanjay Mehta", "Dhruv Shah",
+      "Pooja Jain", "Harpreet Singh", "Amit Patel", "Rajesh Kumar", "Lalita Mehta",
+      "Imran Khan", "Tanya Malik", "Kabir Thakur", "Ritika Kapoor", "Shalini Joshi",
     ]
+
+    // Generate KA-BLR-1004 .. KA-BLR-1050
+    for (let idx = 1004; idx <= 1050; idx++) {
+      const i = idx - 1000 // 4..50
+      const gx = (i % 10) - 5 // -5..4
+      const gy = Math.floor(i / 10) - 2 // -2..3
+      const dx = gx * 0.004
+      const dy = gy * 0.0035
+      const areaSqM = 800 + ((i * 37) % 600) // 800..1399
+      const owner = ownerNames[(i + 3) % ownerNames.length]
+      features.push(mk(`KA-BLR-${idx}`, owner, dx, dy, areaSqM))
+    }
+
+    // --- Chennai cluster (TN-CHN) ---
+    // Center near Chennai and push ~20 parcels around it
+    const chennaiBase = { lat: 13.0827, lng: 80.2707 }
+    const chSquare = (dx: number, dy: number, size = 0.002) => [
+      { lat: chennaiBase.lat + dy, lng: chennaiBase.lng + dx },
+      { lat: chennaiBase.lat + dy, lng: chennaiBase.lng + dx + size },
+      { lat: chennaiBase.lat + dy + size, lng: chennaiBase.lng + dx + size },
+      { lat: chennaiBase.lat + dy + size, lng: chennaiBase.lng + dx },
+    ]
+    const mkCh = (id: string, owner: string, dx: number, dy: number, areaSqM: number): FeatureRecord => ({
+      path: chSquare(dx, dy),
+      properties: {
+        id,
+        owner,
+        areaSqM,
+        jurisdiction: "Greater Chennai · Tamil Nadu",
+        encumbrances: id.endsWith("7") ? ["Encumbrance: EC-2024-07"] : [],
+        chainAssetId: `parcel:${id}:l2-rollup-01`,
+        docDigest: `0x${btoa(id).slice(0, 6)}…${btoa(owner).slice(-6)}`,
+      },
+    })
+
+    const chOwners = [
+      "S. Karthik",
+      "P. Lakshmi",
+      "R. Srinivasan",
+      "A. Priyanka",
+      "V. Bharath",
+      "N. Keerthana",
+      "M. Aravind",
+      "T. Divya",
+      "G. Prakash",
+      "K. Nithya",
+      "D. Vignesh",
+      "S. Sandhya",
+      "R. Harish",
+      "A. Meenakshi",
+      "V. Sanjay",
+      "K. Gayathri",
+      "M. Naveen",
+      "P. Anitha",
+      "S. Dinesh",
+      "R. Kavya",
+    ]
+
+    let chIdx = 2001
+    const chGrid: Array<{ gx: number; gy: number }> = [
+      { gx: -3, gy: -2 },
+      { gx: -1, gy: -2 },
+      { gx: 1, gy: -2 },
+      { gx: 3, gy: -2 },
+      { gx: -4, gy: -1 },
+      { gx: -2, gy: -1 },
+      { gx: 0, gy: -1 },
+      { gx: 2, gy: -1 },
+      { gx: 4, gy: -1 },
+      { gx: -3, gy: 0 },
+      { gx: -1, gy: 0 },
+      { gx: 1, gy: 0 },
+      { gx: 3, gy: 0 },
+      { gx: -4, gy: 1 },
+      { gx: -2, gy: 1 },
+      { gx: 0, gy: 1 },
+      { gx: 2, gy: 1 },
+      { gx: 4, gy: 1 },
+      { gx: -1, gy: 2 },
+      { gx: 1, gy: 2 },
+    ]
+    chGrid.forEach((g, i) => {
+      const dx = g.gx * 0.004
+      const dy = g.gy * 0.0035
+      const areaSqM = 900 + ((i * 53) % 700)
+      const owner = chOwners[i % chOwners.length]
+      features.push(mkCh(`TN-CHN-${chIdx++}`, owner, dx, dy, areaSqM))
+    })
+
+    return features
   }, [])
 
   // Initialize Places Autocomplete on the address input
@@ -127,9 +230,19 @@ export default function MapHologramSection() {
         const inputEl = addrRef.current
         if (inputEl && inputEl !== attachedElRef.current && window.google?.maps?.places) {
           // Recreate Autocomplete on the current input element
-          autocompleteRef.current = new window.google.maps.places.Autocomplete(inputEl, {
+          const ac = new window.google.maps.places.Autocomplete(inputEl, {
             fields: ["geometry", "formatted_address", "name"],
             types: ["geocode"],
+          })
+          autocompleteRef.current = ac
+          placeResultRef.current = null
+          ac.addListener("place_changed", () => {
+            try {
+              const place = ac.getPlace?.()
+              placeResultRef.current = place || null
+            } catch {
+              placeResultRef.current = null
+            }
           })
           attachedElRef.current = inputEl
         }
@@ -341,17 +454,21 @@ export default function MapHologramSection() {
 
       // Prefer Autocomplete selection if any
       if (!parcelId) {
-        const ac = autocompleteRef.current
-        const place = ac?.getPlace?.()
+        const place = placeResultRef.current
         if (place?.geometry?.location) {
           const loc = place.geometry.location
           targetLatLng = { lat: loc.lat(), lng: loc.lng() }
         } else if (addr) {
-          const geocoder = new maps.Geocoder()
-          const resp = await geocoder.geocode({ address: addr })
-          if (resp?.results?.[0]?.geometry?.location) {
-            const loc = resp.results[0].geometry.location
-            targetLatLng = { lat: loc.lat(), lng: loc.lng() }
+          try {
+            const geocoder = new maps.Geocoder()
+            const resp = await geocoder.geocode({ address: addr })
+            const best = resp?.results?.[0]
+            if (best?.geometry?.location) {
+              const loc = best.geometry.location
+              targetLatLng = { lat: loc.lat(), lng: loc.lng() }
+            }
+          } catch (geoErr) {
+            console.warn("[v0] Geocoding failed:", (geoErr as Error).message)
           }
         }
       }
@@ -474,11 +591,20 @@ export default function MapHologramSection() {
             <p className="text-xs leading-relaxed text-muted-foreground">
               {hasQuery ? 'Hover parcels to preview details. Click to pin.' : 'Provide details to reveal parcels over the map.'}
             </p>
-            <div className="mt-3 flex gap-2">
-              <Button variant="secondary" className="holo-glow" aria-label="Start mock verification">
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                variant="secondary"
+                className="holo-glow w-full justify-center whitespace-nowrap"
+                aria-label="Start mock verification"
+              >
                 Verify Ownership (Demo)
               </Button>
-              <Button variant="outline" className="holo-border bg-transparent" aria-label="Start mock bidding">
+              <Button
+                variant="secondary"
+                className="holo-glow w-full justify-center whitespace-nowrap"
+                aria-label="Start mock bidding"
+              >
+                <Gavel className="mr-2 h-4 w-4 shrink-0" />
                 Open Bidding (Demo)
               </Button>
             </div>

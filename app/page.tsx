@@ -8,6 +8,7 @@ import { LandVerification } from "@/components/land-verification"
 import { LandMarketplace } from "@/components/land-marketplace"
 import { WalletProvider } from "@/contexts/wallet-context"
 import { ClientOnly } from "@/components/client-only"
+import AnimatedTitle from "@/components/animated-title"
 import { Wallet, Shield, ShoppingCart, Map } from "lucide-react"
 
 export default function Page() {
@@ -19,9 +20,7 @@ export default function Page() {
           <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
             <div className="flex flex-col items-start gap-6">
               <p className="text-xs tracking-[0.35em] text-accent-foreground/80">INTRODUCING</p>
-              <h1 className="text-pretty text-4xl font-semibold tracking-tight md:text-6xl holo-glow">
-                DhartiLink — UPI for Land Ownership
-              </h1>
+              <AnimatedTitle />
               <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
                 Instant ownership verification, transparent transfers, and open digital bidding—powered by blockchain,
                 geospatial mapping, and digitized records for India's land economy.

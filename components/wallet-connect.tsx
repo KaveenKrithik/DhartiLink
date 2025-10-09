@@ -22,10 +22,35 @@ export function WalletConnect() {
 
   const [isConnecting, setIsConnecting] = useState(false)
 
+  const createConnectSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime)
+      oscillator.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.3)
+      
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+      gainNode.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 0.05)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3)
+      
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.3)
+    } catch (error) {
+      console.warn('Audio context not available:', error)
+    }
+  }
+
   const handleConnect = async () => {
     setIsConnecting(true)
     try {
       await connect()
+      createConnectSound()
       toast.success('Wallet connected successfully!')
     } catch (err) {
       toast.error('Failed to connect wallet')
@@ -34,9 +59,48 @@ export function WalletConnect() {
     }
   }
 
-  const handleDisconnect = () => {
+  const createDisconnectSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const oscillator = audioContext.createOscillator()
+      const gainNode = audioContext.createGain()
+      
+      oscillator.connect(gainNode)
+      gainNode.connect(audioContext.destination)
+      
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime)
+      oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2)
+      
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+      gainNode.gain.linearRampToValueAtTime(0.08, audioContext.currentTime + 0.05)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
+      
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.2)
+    } catch (error) {
+      console.warn('Audio context not available:', error)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    createDisconnectSound()
     disconnect()
     toast.success('Wallet disconnected')
+    try {
+      const eth = (window as any)?.ethereum
+      // Open MetaMask permissions panel; user can revoke/re-approve accounts
+      if (eth?.request) {
+        try {
+          await eth.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] })
+        } catch {}
+      }
+      // Then explicitly request accounts to trigger connect prompt if needed
+      await connect()
+      toast.success('Approve in MetaMask to sign in again')
+    } catch {
+      // If user closes MetaMask, they can click Connect manually
+    }
   }
 
   const copyAddress = () => {

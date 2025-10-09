@@ -8,6 +8,7 @@ type GlobeApi = { flyTo: (lat: number, lng: number, durationMs?: number, done?: 
 export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; onApi?: (api: GlobeApi) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const globeRef = useRef<any>(null)
+  const rotationSoundRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!containerRef.current || globeRef.current) return
@@ -28,10 +29,44 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
     // starfield
     ;(globe as any).createStars?.(10000, 1.6)
 
-    // auto rotate
+    // auto rotate with sound
     const controls = (globe as any).controls()
     controls.autoRotate = true
     controls.autoRotateSpeed = 0.65
+
+    // Add rotation sound effect
+    const createRotationSound = () => {
+      try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const oscillator = audioContext.createOscillator()
+        const gainNode = audioContext.createGain()
+        const filter = audioContext.createBiquadFilter()
+        
+        oscillator.connect(filter)
+        filter.connect(gainNode)
+        gainNode.connect(audioContext.destination)
+        
+        oscillator.type = 'sine'
+        oscillator.frequency.setValueAtTime(200, audioContext.currentTime)
+        
+        filter.type = 'lowpass'
+        filter.frequency.setValueAtTime(400, audioContext.currentTime)
+        
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime)
+        gainNode.gain.linearRampToValueAtTime(0.02, audioContext.currentTime + 0.1)
+        gainNode.gain.linearRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+        
+        oscillator.start(audioContext.currentTime)
+        oscillator.stop(audioContext.currentTime + 0.5)
+      } catch (error) {
+        console.warn('Audio context not available:', error)
+      }
+    }
+
+    // Play rotation sound periodically
+    const rotationInterval = setInterval(() => {
+      createRotationSound()
+    }, 3000)
 
     // initial view
     const renderer = (globe as any).renderer()
@@ -74,6 +109,7 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
     window.addEventListener("resize", onResize)
     return () => {
       window.removeEventListener("resize", onResize)
+      clearInterval(rotationInterval)
       try {
         containerRef.current?.replaceChildren()
       } catch {}
