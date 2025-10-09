@@ -379,7 +379,17 @@ export default function MapHologramSection() {
         setMapReady(true)
       } catch (err) {
         console.error("[v0] Google Maps globe init error:", (err as Error).message)
-        setMapsError("Google Maps is not available. Please configure your API key.")
+        const errorMessage = (err as Error).message
+        
+        if (errorMessage.includes('BillingNotEnabledMapError')) {
+          setMapsError("Google Maps billing is not enabled. Please enable billing in your Google Cloud Console to use the Maps API.")
+        } else if (errorMessage.includes('RefererNotAllowedMapError')) {
+          setMapsError("This domain is not authorized to use the Google Maps API. Please add localhost:3000 to your allowed referrers.")
+        } else if (errorMessage.includes('API key not configured')) {
+          setMapsError("Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file.")
+        } else {
+          setMapsError("Google Maps is not available. Please check your API key configuration and billing settings.")
+        }
       }
     }
     
@@ -689,13 +699,17 @@ export default function MapHologramSection() {
                   {mapsError}
                 </p>
                 <div className="space-y-2 text-sm text-gray-500">
-                  <p>To enable Google Maps:</p>
+                  <p>To fix this issue:</p>
                   <ol className="list-decimal list-inside space-y-1 text-left">
-                    <li>Get a Google Maps API key from Google Cloud Console</li>
+                    <li>Go to <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">Google Cloud Console Billing</a></li>
                     <li>Enable billing for your project</li>
+                    <li>Add a payment method (Google provides $200 free credits)</li>
+                    <li>Return to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">API Credentials</a></li>
                     <li>Add localhost:3000 to allowed referrers</li>
-                    <li>Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file</li>
                   </ol>
+                  <p className="text-xs text-gray-600 mt-2">
+                    💡 <strong>Note:</strong> Google Maps API requires billing to be enabled, even for development use.
+                  </p>
                 </div>
                 <Button 
                   onClick={() => {

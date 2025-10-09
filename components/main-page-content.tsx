@@ -22,6 +22,13 @@ export default function MainPageContent() {
   const { purchasedLands } = usePurchasedLands()
   const { account } = useWalletContext()
   const [isVisible, setIsVisible] = useState(false)
+  const [isKYCVerified, setIsKYCVerified] = useState(false)
+
+  useEffect(() => {
+    // Check KYC status
+    const kycVerified = localStorage.getItem('kyc_verified') === 'true'
+    setIsKYCVerified(kycVerified)
+  }, [])
 
   useEffect(() => {
     // Fade in the main content after a short delay
@@ -42,6 +49,17 @@ export default function MainPageContent() {
             <div className="relative">
               <TitleTransition />
             </div>
+            
+            {/* KYC Status Badge */}
+            {isKYCVerified && (
+              <div className="flex items-center space-x-2">
+                <Badge className="bg-green-500/20 text-green-400 border-green-500/30 flex items-center space-x-1">
+                  <Shield className="w-3 h-3" />
+                  <span>KYC Verified</span>
+                </Badge>
+              </div>
+            )}
+            
             <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
               Instant ownership verification, transparent transfers, and open digital bidding—powered by blockchain,
               geospatial mapping, and digitized records for India's land economy.
