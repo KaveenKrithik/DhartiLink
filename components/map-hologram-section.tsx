@@ -64,6 +64,7 @@ export default function MapHologramSection() {
   const [visible, setVisible] = useState(false)
   const [hasQuery, setHasQuery] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [mapReady, setMapReady] = useState(false)
 
   // Will be used by effects to act after map init
   const [searchResult, setSearchResult] = useState<{
@@ -136,110 +137,168 @@ export default function MapHologramSection() {
     init()
   }, [hasQuery])
 
-  // Create map and holographic polygons only after user submits a query
+  // Initialize map immediately to show globe view; add parcels only after query
   useEffect(() => {
-    if (!hasQuery || !containerRef.current || mapRef.current) return
-
-    let map: any
-    let polygons: any[] = []
+    if (!containerRef.current || mapRef.current) return
     let maps: any
     ;(async () => {
       try {
         maps = await loadGoogleMaps()
-
         const theme = getComputedStyle(document.documentElement)
         const primary = theme.getPropertyValue("--color-primary")?.trim() || "#00e5ff"
         const accent = theme.getPropertyValue("--color-chart-2")?.trim() || "#ff3fd8"
 
-        map = new maps.Map(containerRef.current!, {
-          center: searchResult?.targetLatLng || { lat: 12.9716, lng: 77.5946 },
-          zoom: searchResult?.targetLatLng ? 16 : 14,
+        const map = new maps.Map(containerRef.current!, {
+          center: { lat: 20, lng: 0 },
+          zoom: 2,
           disableDefaultUI: true,
           clickableIcons: false,
           styles: mapStyles as any,
           gestureHandling: "greedy",
           mapTypeControl: false,
+          tilt: 0,
+          heading: 0,
         })
         mapRef.current = map
-
         containerRef.current!.style.boxShadow =
           "0 0 24px -8px rgba(0, 229, 255, 0.35), inset 0 0 0 1px rgba(0, 229, 255, 0.25)"
 
-        const setCursor = (v: string) => {
-          if (containerRef.current) containerRef.current.style.cursor = v
-        }
-
-        polygons = geojson.map((feature) => {
-          const poly = new maps.Polygon({
-            paths: feature.path,
+        // Subtle animated glow on idle
+        try {
+          const overlay = new maps.Circle({
+            center: { lat: 20, lng: 0 },
+            radius: 2_000_000,
             strokeColor: accent,
-            strokeOpacity: 0.85,
-            strokeWeight: 2,
+            strokeOpacity: 0.15,
+            strokeWeight: 1,
             fillColor: primary,
-            fillOpacity: 0.18,
+            fillOpacity: 0.05,
             map,
           })
+          setTimeout(() => overlay.setMap(null), 2500)
+        } catch {}
 
-          poly.addListener("mouseover", () => {
-            setCursor("pointer")
-            setSelected({ ...feature.properties })
-            poly.setOptions({ fillOpacity: 0.26, strokeWeight: 3 })
-          })
-          poly.addListener("mouseout", () => {
-            setCursor("")
-            poly.setOptions({ fillOpacity: 0.18, strokeWeight: 2 })
-          })
-          poly.addListener("click", () => setVisible(true))
-          // attach id for lookup
-          ;(poly as any).__parcelId = feature.properties.id
-          return poly
+        setMapReady(true)
+      } catch (err) {
+        console.error("[v0] Google Maps globe init error:", (err as Error).message)
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    if (!mapReady || !hasQuery || !mapRef.current) return
+    let polygons: any[] = []
+    let maps = window.google?.maps
+    try {
+      const theme = getComputedStyle(document.documentElement)
+      const primary = theme.getPropertyValue("--color-primary")?.trim() || "#00e5ff"
+      const accent = theme.getPropertyValue("--color-chart-2")?.trim() || "#ff3fd8"
+      const map = mapRef.current
+
+      const setCursor = (v: string) => {
+        if (containerRef.current) containerRef.current.style.cursor = v
+      }
+
+      polygons = geojson.map((feature) => {
+        const poly = new maps.Polygon({
+          paths: feature.path,
+          strokeColor: accent,
+          strokeOpacity: 0.85,
+          strokeWeight: 2,
+          fillColor: primary,
+          fillOpacity: 0.18,
+          map,
         })
 
-        // Focus result if parcelId was matched
-        if (searchResult?.parcelId) {
-          const target = geojson.find((g) => g.properties.id === searchResult.parcelId)
+        poly.addListener("mouseover", () => {
+          setCursor("pointer")
+          setSelected({ ...feature.properties })
+          poly.setOptions({ fillOpacity: 0.26, strokeWeight: 3 })
+        })
+        poly.addListener("mouseout", () => {
+          setCursor("")
+          poly.setOptions({ fillOpacity: 0.18, strokeWeight: 2 })
+        })
+        poly.addListener("click", () => setVisible(true))
+        ;(poly as any).__parcelId = feature.properties.id
+        return poly
+      })
+
+      const flyToBounds = (bounds: any) => {
+        map.fitBounds(bounds, 48)
+        setTimeout(() => {
+          // Add cinematic tilt/heading
+          try {
+            map.setTilt(67.5)
+            map.setHeading(35)
+          } catch {}
+        }, 450)
+      }
+
+      const pulseAt = (lat: number, lng: number) => {
+        try {
+          const marker = new maps.Marker({ position: { lat, lng }, map, animation: maps.Animation.DROP })
+          const circle = new maps.Circle({
+            center: { lat, lng },
+            radius: 30,
+            strokeColor: accent,
+            strokeOpacity: 0.6,
+            strokeWeight: 1,
+            fillColor: accent,
+            fillOpacity: 0.15,
+            map,
+          })
+          setTimeout(() => circle.setOptions({ radius: 120, fillOpacity: 0.05, strokeOpacity: 0.25 }), 400)
+          setTimeout(() => {
+            circle.setMap(null)
+            marker.setMap(null)
+          }, 2000)
+        } catch {}
+      }
+
+      if (searchResult?.parcelId) {
+        const target = geojson.find((g) => g.properties.id === searchResult.parcelId)
+        if (target) {
+          const bounds = new maps.LatLngBounds()
+          for (const p of target.path) bounds.extend(p)
+          flyToBounds(bounds)
+          setSelected(target.properties)
+          setVisible(true)
+          const centroid = target.path.reduce(
+            (acc, p) => ({ lat: acc.lat + p.lat / target.path.length, lng: acc.lng + p.lng / target.path.length }),
+            { lat: 0, lng: 0 },
+          )
+          pulseAt(centroid.lat, centroid.lng)
+        }
+      } else if (searchResult?.targetLatLng && window.google?.maps?.geometry?.poly) {
+        const point = new maps.LatLng(searchResult.targetLatLng)
+        const maybe = polygons.find((poly) => window.google.maps.geometry.poly.containsLocation(point, poly))
+        if (maybe) {
+          const id = (maybe as any).__parcelId as string
+          const target = geojson.find((g) => g.properties.id === id)
           if (target) {
             const bounds = new maps.LatLngBounds()
             for (const p of target.path) bounds.extend(p)
-            map.fitBounds(bounds, 32)
+            flyToBounds(bounds)
             setSelected(target.properties)
             setVisible(true)
           }
-        } else if (searchResult?.targetLatLng && window.google?.maps?.geometry?.poly) {
-          // If only address provided, try to detect containing polygon
-          const point = new maps.LatLng(searchResult.targetLatLng)
-          const maybe = polygons.find((poly) => window.google.maps.geometry.poly.containsLocation(point, poly))
-          if (maybe) {
-            const id = (maybe as any).__parcelId as string
-            const target = geojson.find((g) => g.properties.id === id)
-            if (target) {
-              const bounds = new maps.LatLngBounds()
-              for (const p of target.path) bounds.extend(p)
-              map.fitBounds(bounds, 24)
-              setSelected(target.properties)
-              setVisible(true)
-            }
-          } else {
-            map.setCenter(searchResult.targetLatLng)
-            map.setZoom(16)
-          }
+        } else {
+          map.setCenter(searchResult.targetLatLng)
+          map.setZoom(16)
         }
-      } catch (err) {
-        console.error("[v0] Google Maps load/init error:", (err as Error).message)
-        setSearchError("Map failed to initialize. Please retry your search.")
       }
-    })()
 
-    return () => {
-      if (mapRef.current) {
+      return () => {
         try {
           ;(polygons || []).forEach((p) => p.setMap && p.setMap(null))
         } catch {}
-        mapRef.current = null
       }
+    } catch (err) {
+      console.error("[v0] parcel overlay error:", (err as Error).message)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasQuery])
+  }, [mapReady, hasQuery])
 
   // IntersectionObserver still controls the hologram reveal effect
   useEffect(() => {
@@ -313,7 +372,7 @@ export default function MapHologramSection() {
     <section id="holo-section" ref={sectionRef} className="relative">
       <div className="holo-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
 
-      {/* Pre-map large search form (map hidden until query provided) */}
+      {/* Pre-map large search form (map shows globe until query) */}
       {!hasQuery && (
         <div className="mx-auto max-w-4xl px-6 py-10 md:py-14">
           <div className="glass holo-border scanlines rounded-lg p-6">
@@ -373,12 +432,12 @@ export default function MapHologramSection() {
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[1fr_380px] md:py-10">
         <div className="relative">
-          {/* map container is only visible when hasQuery */}
+          {/* map container always visible; shows globe initially */}
           <div
             ref={containerRef as any}
             className={cn(
               "w-full rounded-lg border holo-border glass transition-all",
-              hasQuery ? "h-[60vh] md:h-[70vh] opacity-100" : "h-0 opacity-0 pointer-events-none",
+              "h-[60vh] md:h-[70vh] opacity-100",
             )}
             aria-label="Interactive land parcels map"
             role="region"
