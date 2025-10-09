@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import MapHologramSection from "@/components/map-hologram-section"
@@ -13,9 +14,19 @@ import { useSoundManager } from "@/components/sound-manager"
 
 export default function MainPageContent() {
   const { playTabSwitch, playCardHover } = useSoundManager()
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    // Fade in the main content after a short delay
+    const timer = setTimeout(() => {
+      setIsVisible(true)
+    }, 500)
+    
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className={`min-h-screen bg-black transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       <header className="relative overflow-hidden">
         <div className="holo-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
         <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">

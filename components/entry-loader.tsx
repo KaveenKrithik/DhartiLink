@@ -73,7 +73,7 @@ export default function EntryLoader() {
       setVisible(false)
     }, 4000)
     
-    // Progress animation - start immediately
+    // Progress animation - start immediately and complete at 100% for smoother transition
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         const newProgress = prev + 2.5 // 4000ms / 100 = 40ms per 2.5%
@@ -166,6 +166,9 @@ export default function EntryLoader() {
                 Link
               </span>
             </h1>
+            <span className="text-sm md:text-base text-accent-foreground/70 font-medium tracking-wide uppercase block mt-2">
+              UPI for Land Ownership
+            </span>
           </div>
           <div className="mx-auto mt-12 w-48">
             <div className="h-2 w-full overflow-hidden rounded-full bg-gray-800/50">
@@ -177,9 +180,6 @@ export default function EntryLoader() {
                   boxShadow: '0 0 12px rgba(0, 229, 255, 0.8)'
                 }}
               />
-            </div>
-            <div className="mt-2 text-xs text-gray-400 text-center">
-              {Math.round(progress)}%
             </div>
           </div>
         </div>

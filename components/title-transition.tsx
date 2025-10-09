@@ -9,6 +9,7 @@ export default function TitleTransition() {
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [showMainTitle, setShowMainTitle] = useState(false)
   const [isDrifting, setIsDrifting] = useState(false)
+  const [progress, setProgress] = useState(0)
   const titleRef = useRef<HTMLDivElement | null>(null)
   
   const { playLanguageChange, playHoloBeep } = useSoundManager()
@@ -29,18 +30,26 @@ export default function TitleTransition() {
   )
 
   useEffect(() => {
-    // Start transition after loading screen
+    // Progress animation - start immediately
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = prev + 2.5 // 4000ms / 100 = 40ms per 2.5%
+        return newProgress >= 100 ? 100 : newProgress
+      })
+    }, 100) // Update every 100ms
+    
+    // Simple fade transition after loading screen
     const transitionTimer = setTimeout(() => {
-      setIsDrifting(true)
+      setIsTransitioning(true)
       setTimeout(() => {
-        setIsTransitioning(true)
-        setTimeout(() => {
-          setShowMainTitle(true)
-        }, 1000) // Faster transition
-      }, 800) // Start drift sooner
+        setShowMainTitle(true)
+      }, 1000) // Fade out duration
     }, 4000) // After loading screen duration
 
-    return () => clearTimeout(transitionTimer)
+    return () => {
+      clearTimeout(transitionTimer)
+      clearInterval(progressInterval)
+    }
   }, [])
 
   useEffect(() => {
@@ -60,23 +69,19 @@ export default function TitleTransition() {
       <>
         {/* Background overlay that fades out */}
         <div 
-          className={`fixed inset-0 z-[50] bg-black transition-opacity duration-1000 ${
+          className={`fixed inset-0 z-[50] bg-black transition-opacity duration-1500 ${
             isTransitioning ? 'opacity-0' : 'opacity-100'
           }`}
+          style={{
+            transition: 'opacity 1.5s cubic-bezier(0.15, 0.35, 0.25, 0.95)'
+          }}
         />
         {/* Title container */}
         <div 
           ref={titleRef}
-          className={`fixed inset-0 z-[60] flex transition-all duration-1000 ease-out ${
-            isDrifting 
-              ? 'items-start justify-start pt-20 pl-6 scale-75' 
-              : 'items-center justify-center scale-100'
-          } ${
+          className={`fixed inset-0 z-[60] flex items-center justify-center transition-opacity duration-1000 ease-out ${
             isTransitioning ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
-          style={{
-            transition: 'all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-          }}
         >
         <div className="text-center">
           <div className="text-xs tracking-[0.35em] text-gray-400 mb-8">INITIALIZING</div>
@@ -114,13 +119,16 @@ export default function TitleTransition() {
                 Link
               </span>
             </h1>
-            <div className="mx-auto mt-12 h-1 w-40 overflow-hidden rounded-full bg-gray-800">
+            <span className="text-sm md:text-base text-accent-foreground/70 font-medium tracking-wide uppercase block mt-2">
+              UPI for Land Ownership
+            </span>
+            <div className="mx-auto mt-12 h-2 w-48 overflow-hidden rounded-full bg-gray-800/50">
               <div 
-                className="h-full transition-all duration-75 ease-out"
+                className="h-full transition-all duration-100 ease-out"
                 style={{ 
-                  width: '100%',
+                  width: `${progress}%`,
                   background: 'linear-gradient(90deg, #00e5ff, #6cf2ff)',
-                  boxShadow: '0 0 8px rgba(0, 229, 255, 0.5)'
+                  boxShadow: '0 0 12px rgba(0, 229, 255, 0.8)'
                 }}
               />
             </div>
