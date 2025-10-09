@@ -193,7 +193,7 @@ export default function MainPageContent() {
       </section>
 
       <footer className="mx-auto max-w-6xl px-6 py-10 text-xs text-muted-foreground">
-        Prototype UI preview. Data shown is dummy and for demonstration only.
+        IotAlliance.
       </footer>
     </main>
   )

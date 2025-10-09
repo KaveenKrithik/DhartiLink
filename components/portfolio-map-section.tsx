@@ -1,34 +1,21 @@
 'use client'
 
-import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Eye, Navigation } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { usePurchasedLands } from '@/contexts/purchased-lands-context'
 import { useWalletContext } from '@/contexts/wallet-context'
 import { useSoundManager } from '@/components/sound-manager'
-import PortfolioMap from '@/components/portfolio-map'
 
 export default function PortfolioMapSection() {
   const { purchasedLands } = usePurchasedLands()
   const { account } = useWalletContext()
   const { playButtonClick, playCardHover } = useSoundManager()
-  const [selectedLand, setSelectedLand] = useState<string | null>(null)
 
   const handleLandClick = (landId: string) => {
     playButtonClick()
-    setSelectedLand(landId)
-    
-    // Find the land details
-    const land = purchasedLands.find(l => l.id === landId)
-    if (land) {
-      // Trigger map search with the land location
-      const searchEvent = new CustomEvent('portfolioLandSearch', {
-        detail: { location: land.location, title: land.title }
-      })
-      window.dispatchEvent(searchEvent)
-    }
+    // Simple click handler without map functionality
   }
 
   return (
@@ -102,8 +89,7 @@ export default function PortfolioMapSection() {
                       handleLandClick(land.id)
                     }}
                   >
-                    <Navigation className="h-3 w-3 mr-1" />
-                    View on Map
+                    View Details
                   </Button>
                 </div>
               ))}
@@ -112,27 +98,6 @@ export default function PortfolioMapSection() {
         </CardContent>
       </Card>
 
-      {/* Interactive Map - Same as Maps Section */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-semibold text-blue-50 flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Portfolio Interactive Map
-          </h3>
-          {selectedLand && (
-            <div className="text-sm text-gray-400">
-              Viewing: {purchasedLands.find(l => l.id === selectedLand)?.title}
-            </div>
-          )}
-        </div>
-        
-        {/* Use the dedicated PortfolioMap component */}
-        <PortfolioMap />
-        
-        <p className="text-xs text-gray-500">
-          Click on your properties above to zoom to their location on the map
-        </p>
-      </div>
     </div>
   )
 }
