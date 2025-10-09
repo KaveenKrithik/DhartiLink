@@ -8,19 +8,19 @@ import { LandVerification } from "@/components/land-verification"
 import { LandMarketplace } from "@/components/land-marketplace"
 import { WalletProvider } from "@/contexts/wallet-context"
 import { ClientOnly } from "@/components/client-only"
-import AnimatedTitle from "@/components/animated-title"
+import TitleTransition from "@/components/title-transition"
 import { Wallet, Shield, ShoppingCart, Map } from "lucide-react"
 
 export default function Page() {
   return (
     <WalletProvider>
-      <main className="min-h-screen">
+      <main className="min-h-screen bg-black">
         <header className="relative overflow-hidden">
           <div className="holo-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
           <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
             <div className="flex flex-col items-start gap-6">
               <p className="text-xs tracking-[0.35em] text-accent-foreground/80">INTRODUCING</p>
-              <AnimatedTitle />
+              <TitleTransition />
               <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
                 Instant ownership verification, transparent transfers, and open digital bidding—powered by blockchain,
                 geospatial mapping, and digitized records for India's land economy.

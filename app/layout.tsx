@@ -4,7 +4,6 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Toaster } from "@/components/ui/sonner"
-import ClientEntryLoader from "@/components/client-entry-loader"
 import "./globals.css"
 import { Suspense } from "react"
 
@@ -26,7 +25,6 @@ export default function RootLayout({
         className={`font-sans ${GeistSans.variable} ${GeistMono.variable} holo-theme antialiased`}
         suppressHydrationWarning={true}
       >
-        <ClientEntryLoader />
         <Suspense fallback={null}>{children}</Suspense>
         <Toaster />
         <Analytics />
