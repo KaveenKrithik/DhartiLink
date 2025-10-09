@@ -7,6 +7,7 @@ export default function TitleTransition() {
   const [blink, setBlink] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [showMainTitle, setShowMainTitle] = useState(false)
+  const [isDrifting, setIsDrifting] = useState(false)
   const titleRef = useRef<HTMLDivElement | null>(null)
 
   const dhartiTranslations = useMemo(
@@ -27,43 +28,21 @@ export default function TitleTransition() {
   useEffect(() => {
     // Start transition after loading screen
     const transitionTimer = setTimeout(() => {
-      setIsTransitioning(true)
+      setIsDrifting(true)
       setTimeout(() => {
-        setShowMainTitle(true)
-      }, 1000)
+        setIsTransitioning(true)
+        setTimeout(() => {
+          setShowMainTitle(true)
+        }, 1500) // Smooth transition
+      }, 1000) // Start drift after 1 second
     }, 4000) // After loading screen duration
 
     return () => clearTimeout(transitionTimer)
   }, [])
 
   useEffect(() => {
-    const createTransitionSound = () => {
-      try {
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const oscillator = audioContext.createOscillator()
-        const gainNode = audioContext.createGain()
-        
-        oscillator.connect(gainNode)
-        gainNode.connect(audioContext.destination)
-        
-        oscillator.type = 'sine'
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime)
-        oscillator.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.2)
-        
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime)
-        gainNode.gain.linearRampToValueAtTime(0.03, audioContext.currentTime + 0.05)
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2)
-        
-        oscillator.start(audioContext.currentTime)
-        oscillator.stop(audioContext.currentTime + 0.2)
-      } catch (error) {
-        console.warn('Audio context not available:', error)
-      }
-    }
-
     const i = setInterval(() => {
       setBlink(true)
-      createTransitionSound()
       setTimeout(() => {
         setIdx((p) => (p + 1) % dhartiTranslations.length)
         setBlink(false)
@@ -76,9 +55,16 @@ export default function TitleTransition() {
     return (
       <div 
         ref={titleRef}
-        className={`fixed inset-0 z-[60] bg-black flex items-center justify-center transition-all duration-1000 ease-in-out ${
-          isTransitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+        className={`fixed inset-0 z-[60] bg-black flex transition-all duration-1500 ease-in-out ${
+          isDrifting 
+            ? 'items-start justify-start pt-20 pl-6 scale-75' 
+            : 'items-center justify-center scale-100'
+        } ${
+          isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}
+        style={{
+          transition: 'all 1.5s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}
       >
         <div className="text-center">
           <div className="text-xs tracking-[0.35em] text-gray-400 mb-8">INITIALIZING</div>
@@ -133,8 +119,8 @@ export default function TitleTransition() {
   }
 
   return (
-    <h1 className="text-pretty text-4xl font-semibold tracking-tight md:text-6xl holo-glow">
-      <div className="flex items-baseline">
+    <div>
+      <h1 className="text-6xl font-semibold md:text-8xl text-amber-50 flex items-baseline">
         <span
           className={
             "transition-all duration-500 ease-in-out relative inline-block " +
@@ -148,10 +134,10 @@ export default function TitleTransition() {
         >
           {dhartiTranslations[idx]}
           <div 
-            className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
+            className="absolute -bottom-2 left-0 right-0 h-1 rounded-full"
             style={{ 
               background: 'linear-gradient(90deg, #ef4444, #dc2626)',
-              boxShadow: '0 0 4px rgba(239, 68, 68, 0.5)'
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
             }}
           />
         </span>
@@ -166,10 +152,10 @@ export default function TitleTransition() {
         >
           Link
         </span>
-      </div>
-      <span className="text-sm md:text-base text-accent-foreground/70 font-medium tracking-wide uppercase">
+      </h1>
+      <span className="text-sm md:text-base text-accent-foreground/70 font-medium tracking-wide uppercase block mt-2">
         UPI for Land Ownership
       </span>
-    </h1>
+    </div>
   )
 }

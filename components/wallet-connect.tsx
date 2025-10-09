@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useWalletContext } from '@/contexts/wallet-context'
 import { Wallet, Copy, ExternalLink, LogOut, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSoundManager } from '@/components/sound-manager'
 
 export function WalletConnect() {
   const {
@@ -21,6 +22,7 @@ export function WalletConnect() {
   } = useWalletContext()
 
   const [isConnecting, setIsConnecting] = useState(false)
+  const { playButtonClick, playWalletConnect } = useSoundManager()
 
   const createConnectSound = () => {
     try {
@@ -48,9 +50,10 @@ export function WalletConnect() {
 
   const handleConnect = async () => {
     setIsConnecting(true)
+    playButtonClick()
     try {
       await connect()
-      createConnectSound()
+      playWalletConnect()
       toast.success('Wallet connected successfully!')
     } catch (err) {
       toast.error('Failed to connect wallet')

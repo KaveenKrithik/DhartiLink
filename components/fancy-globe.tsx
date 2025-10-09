@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import Globe from "globe.gl"
+import { useSoundManager } from "@/components/sound-manager"
 
 type GlobeApi = { flyTo: (lat: number, lng: number, durationMs?: number, done?: () => void) => void }
 
@@ -9,6 +10,7 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
   const containerRef = useRef<HTMLDivElement | null>(null)
   const globeRef = useRef<any>(null)
   const rotationSoundRef = useRef<number | null>(null)
+  const { playGlobeRotation, startTranquilMusic, stopTranquilMusic } = useSoundManager()
 
   useEffect(() => {
     if (!containerRef.current || globeRef.current) return
@@ -63,10 +65,13 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
       }
     }
 
+    // Start tranquil music when globe is ready
+    startTranquilMusic()
+
     // Play rotation sound periodically
     const rotationInterval = setInterval(() => {
-      createRotationSound()
-    }, 3000)
+      playGlobeRotation()
+    }, 5000)
 
     // initial view
     const renderer = (globe as any).renderer()
@@ -110,6 +115,7 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
     return () => {
       window.removeEventListener("resize", onResize)
       clearInterval(rotationInterval)
+      stopTranquilMusic()
       try {
         containerRef.current?.replaceChildren()
       } catch {}
