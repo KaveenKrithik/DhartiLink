@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import dynamic from "next/dynamic"
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyCVzTgaYCdrtau2c8WkVQSJjaruwjqDu1k"
 
@@ -65,6 +66,8 @@ export default function MapHologramSection() {
   const [hasQuery, setHasQuery] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const FancyGlobe = useMemo(() => dynamic(() => import("./fancy-globe"), { ssr: false }), [])
+  const globeApiRef = useRef<{ flyTo: (lat: number, lng: number, durationMs?: number, done?: () => void) => void } | null>(null)
 
   // Will be used by effects to act after map init
   const [searchResult, setSearchResult] = useState<{
@@ -137,9 +140,9 @@ export default function MapHologramSection() {
     init()
   }, [hasQuery])
 
-  // Initialize map immediately to show globe view; add parcels only after query
+  // Initialize Google Map once the user has searched (container exists then)
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!hasQuery || !containerRef.current || mapRef.current) return
     let maps: any
     ;(async () => {
       try {
@@ -183,7 +186,7 @@ export default function MapHologramSection() {
         console.error("[v0] Google Maps globe init error:", (err as Error).message)
       }
     })()
-  }, [])
+  }, [hasQuery])
 
   useEffect(() => {
     if (!mapReady || !hasQuery || !mapRef.current) return
@@ -358,10 +361,28 @@ export default function MapHologramSection() {
         return
       }
 
-      // Set query and let effect initialize the map
-      setSearchResult({ parcelId, targetLatLng })
-      setHasQuery(true)
-      setTimeout(() => setVisible(true), 50)
+      // If we have a target position, animate globe first, then switch to map
+      const endLatLng = targetLatLng || (() => {
+        const byId = (parcelId && geojson.find((g) => g.properties.id === parcelId)) || null
+        if (!byId) return undefined
+        const c = byId.path.reduce(
+          (acc, p) => ({ lat: acc.lat + p.lat / byId.path.length, lng: acc.lng + p.lng / byId.path.length }),
+          { lat: 0, lng: 0 },
+        )
+        return c
+      })()
+
+      if (!hasQuery && endLatLng && globeApiRef.current) {
+        globeApiRef.current.flyTo(endLatLng.lat, endLatLng.lng, 1400, () => {
+          setSearchResult({ parcelId, targetLatLng })
+          setHasQuery(true)
+          setTimeout(() => setVisible(true), 50)
+        })
+      } else {
+        setSearchResult({ parcelId, targetLatLng })
+        setHasQuery(true)
+        setTimeout(() => setVisible(true), 50)
+      }
     } catch (err) {
       console.error("[v0] Search error:", (err as Error).message)
       setSearchError("Search failed. Please try again.")
@@ -372,7 +393,7 @@ export default function MapHologramSection() {
     <section id="holo-section" ref={sectionRef} className="relative">
       <div className="holo-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden="true" />
 
-      {/* Pre-map large search form (map shows globe until query) */}
+      {/* Pre-map large search form (globe showing behind) */}
       {!hasQuery && (
         <div className="mx-auto max-w-4xl px-6 py-10 md:py-14">
           <div className="glass holo-border scanlines rounded-lg p-6">
@@ -430,25 +451,28 @@ export default function MapHologramSection() {
         </div>
       )}
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[1fr_380px] md:py-10">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[minmax(0,1fr)_380px] md:py-10">
         <div className="relative">
-          {/* map container always visible; shows globe initially */}
-          <div
-            ref={containerRef as any}
-            className={cn(
-              "w-full rounded-lg border holo-border glass transition-all",
-              "h-[60vh] md:h-[70vh] opacity-100",
-            )}
-            aria-label="Interactive land parcels map"
-            role="region"
-          />
+          {/* Left: render either globe or map for consistent layout */}
+          {!hasQuery ? (
+            <div className="h-[52vh] sm:h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg border holo-border glass">
+              <FancyGlobe onApi={(api) => (globeApiRef.current = api)} />
+            </div>
+          ) : (
+            <div
+              ref={containerRef as any}
+              className="h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg border holo-border glass"
+              aria-label="Interactive land parcels map"
+              role="region"
+            />
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
           <HologramPanel parcel={selected} visible={visible} />
           <div className="glass holo-border p-4">
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Provide details to reveal the map. Hover parcels to preview details. Click to pin.
+              {hasQuery ? 'Hover parcels to preview details. Click to pin.' : 'Provide details to reveal parcels over the map.'}
             </p>
             <div className="mt-3 flex gap-2">
               <Button variant="secondary" className="holo-glow" aria-label="Start mock verification">
