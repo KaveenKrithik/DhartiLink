@@ -3,17 +3,24 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import MapHologramSection from "@/components/map-hologram-section"
+import PortfolioMapSection from "@/components/portfolio-map-section"
 import { WalletConnect } from "@/components/wallet-connect"
 import { LandVerification } from "@/components/land-verification"
 import { LandMarketplace } from "@/components/land-marketplace"
 import { ClientOnly } from "@/components/client-only"
 import TitleTransition from "@/components/title-transition"
-import { Wallet, Shield, ShoppingCart, Map } from "lucide-react"
+import { Wallet, Shield, ShoppingCart, Map, Briefcase } from "lucide-react"
 import { useSoundManager } from "@/components/sound-manager"
+import { usePurchasedLands } from "@/contexts/purchased-lands-context"
+import { useWalletContext } from "@/contexts/wallet-context"
 
 export default function MainPageContent() {
-  const { playTabSwitch, playCardHover } = useSoundManager()
+  const { playTabSwitch, playCardHover, playButtonClick } = useSoundManager()
+  const { purchasedLands } = usePurchasedLands()
+  const { account } = useWalletContext()
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -71,7 +78,7 @@ export default function MainPageContent() {
 
       <section className="mx-auto max-w-6xl px-6 py-16">
         <Tabs defaultValue="wallet" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger 
               value="wallet" 
               className="flex items-center gap-2"
@@ -104,6 +111,14 @@ export default function MainPageContent() {
               <Map className="h-4 w-4" />
               Map
             </TabsTrigger>
+            <TabsTrigger 
+              value="portfolio" 
+              className="flex items-center gap-2"
+              onMouseEnter={playTabSwitch}
+            >
+              <Briefcase className="h-4 w-4" />
+              Portfolio
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="wallet" className="mt-6">
@@ -128,7 +143,7 @@ export default function MainPageContent() {
                   <div className="text-sm space-y-2">
                     <p>• Connect MetaMask wallet</p>
                     <p>• View account balance and details</p>
-                    <p>• Send ETH transactions</p>
+                    <p>• Send LT transactions</p>
                     <p>• Sign messages for verification</p>
                     <p>• Switch between networks</p>
                   </div>
@@ -169,6 +184,10 @@ export default function MainPageContent() {
           
           <TabsContent value="map" className="mt-6">
             <MapHologramSection />
+          </TabsContent>
+          
+          <TabsContent value="portfolio" className="mt-6">
+            <PortfolioMapSection />
           </TabsContent>
         </Tabs>
       </section>

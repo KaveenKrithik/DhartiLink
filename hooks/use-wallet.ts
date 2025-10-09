@@ -108,6 +108,13 @@ export function useWallet(): WalletState & WalletActions {
     }
 
     try {
+      // For 0-value transactions, just simulate success
+      if (amount === '0' || amount === '0.0') {
+        // Generate a fake transaction hash for demo purposes
+        const fakeHash = '0x' + Math.random().toString(16).substr(2, 64)
+        return fakeHash
+      }
+
       const tx = await state.signer.sendTransaction({
         to,
         value: ethers.parseEther(amount),

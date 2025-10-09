@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useWalletContext } from '@/contexts/wallet-context'
+import { PurchaseSuccess } from '@/components/purchase-success'
 import { Landmark, Send, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,6 +19,7 @@ interface PaymentModalProps {
   price: string
   sellerAddress: string
   children: React.ReactNode
+  onPurchaseSuccess?: () => void
 }
 
 export function PaymentModal({ 
@@ -25,13 +27,15 @@ export function PaymentModal({
   landTitle, 
   price, 
   sellerAddress, 
-  children 
+  children,
+  onPurchaseSuccess
 }: PaymentModalProps) {
   const { isConnected, account, sendTransaction, signMessage } = useWalletContext()
   const [isOpen, setIsOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
   const [txHash, setTxHash] = useState<string | null>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
 
   const handlePayment = async () => {
     if (!isConnected || !account) {
@@ -42,7 +46,7 @@ export function PaymentModal({
     setIsProcessing(true)
     try {
       // Sign the land purchase message
-      const purchaseMessage = `I agree to purchase land ${landId} (${landTitle}) for ${price} ETH`
+      const purchaseMessage = `I agree to purchase land ${landId} (${landTitle}) for ${price} LT`
       const signature = await signMessage(purchaseMessage)
       
       if (!signature) {
@@ -54,12 +58,23 @@ export function PaymentModal({
       
       if (hash) {
         setTxHash(hash)
-        toast.success('Payment sent successfully!')
+        toast.success('Transaction successful!')
         toast.success(`Transaction Hash: ${hash}`)
+        // Close the modal first
+        setIsOpen(false)
+        // Call the purchase success callback
+        if (onPurchaseSuccess) {
+          onPurchaseSuccess()
+        }
+        // Show success page after a short delay
+        setTimeout(() => {
+          setShowSuccess(true)
+        }, 100)
       } else {
         throw new Error('Transaction failed')
       }
     } catch (error: any) {
+      console.error('Payment failed:', error)
       toast.error(error.message || 'Payment failed')
     } finally {
       setIsProcessing(false)
@@ -70,6 +85,11 @@ export function PaymentModal({
     setIsOpen(false)
     setTxHash(null)
     setMessage('')
+  }
+
+  // Show success page if transaction was successful
+  if (showSuccess) {
+    return <PurchaseSuccess landTitle={landTitle} landId={landId} />
   }
 
   return (
@@ -101,7 +121,7 @@ export function PaymentModal({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Price:</span>
-                <span className="font-mono font-semibold">{price} ETH</span>
+                <span className="font-mono font-semibold">{price} LT</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Seller:</span>
@@ -164,7 +184,7 @@ export function PaymentModal({
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-1" />
-                  Pay {price} ETH
+                  Pay {price} LT
                 </>
               )}
             </Button>

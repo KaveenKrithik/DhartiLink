@@ -12,7 +12,12 @@ import { Label } from "@/components/ui/label"
 import dynamic from "next/dynamic"
 import { useSoundManager } from "@/components/sound-manager"
 
-const GOOGLE_MAPS_API_KEY = "AIzaSyCVzTgaYCdrtau2c8WkVQSJjaruwjqDu1k"
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyCVzTgaYCdrtau2c8WkVQSJjaruwjqDu1k"
+
+// Debug: Log the API key status
+if (typeof window !== 'undefined') {
+  console.log('Google Maps API Key:', GOOGLE_MAPS_API_KEY ? 'Configured' : 'Not configured')
+}
 
 declare global {
   interface Window {
@@ -26,6 +31,11 @@ function loadGoogleMaps(): Promise<any> {
   if (typeof window === "undefined") return Promise.reject(new Error("Not in browser"))
   if (window.google?.maps) return Promise.resolve(window.google.maps)
   if (window.__gmapsPromise) return window.__gmapsPromise
+
+  // Check if API key is available
+  if (!GOOGLE_MAPS_API_KEY) {
+    return Promise.reject(new Error("Google Maps API key not configured"))
+  }
 
   window.__gmapsPromise = new Promise((resolve, reject) => {
     const id = "google-maps-js"
@@ -76,8 +86,10 @@ export default function MapHologramSection() {
   const [selected, setSelected] = useState<Parcel | null>(null)
   const [visible, setVisible] = useState(false)
   const [hasQuery, setHasQuery] = useState(false)
+  const [query, setQuery] = useState<string>("")
   const [searchError, setSearchError] = useState<string | null>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [mapsError, setMapsError] = useState<string | null>(null)
   const FancyGlobe = useMemo(() => dynamic(() => import("./fancy-globe"), { ssr: false }), [])
   const globeApiRef = useRef<{ flyTo: (lat: number, lng: number, durationMs?: number, done?: () => void) => void } | null>(null)
 
@@ -263,18 +275,78 @@ export default function MapHologramSection() {
     init()
   }, [hasQuery])
 
+  // Listen for portfolio land search events
+  useEffect(() => {
+    const handlePortfolioLandSearch = async (event: CustomEvent) => {
+      const { location, title } = event.detail
+      setQuery(location)
+      setHasQuery(true)
+      playMapSearch()
+      
+      // Set the address input value and trigger search
+      if (addrRef.current) {
+        addrRef.current.value = location
+      }
+      
+      // Trigger the search programmatically
+      try {
+        const maps = await loadGoogleMaps()
+        const geocoder = new maps.Geocoder()
+        const resp = await geocoder.geocode({ address: location })
+        const best = resp?.results?.[0]
+        if (best?.geometry?.location) {
+          const loc = best.geometry.location
+          setSearchResult({
+            targetLatLng: { lat: loc.lat(), lng: loc.lng() }
+          })
+        }
+      } catch (geoErr) {
+        console.warn("[v0] Portfolio geocoding failed:", (geoErr as Error).message)
+        // Don't set hasQuery to true if geocoding fails
+        setHasQuery(false)
+        setQuery("")
+      }
+    }
+
+    window.addEventListener('portfolioLandSearch', handlePortfolioLandSearch as EventListener)
+    
+    return () => {
+      window.removeEventListener('portfolioLandSearch', handlePortfolioLandSearch as EventListener)
+    }
+  }, [playMapSearch])
+
   // Initialize Google Map once the user has searched (container exists then)
   useEffect(() => {
     if (!hasQuery || !containerRef.current || mapRef.current) return
-    let maps: any
-    ;(async () => {
+    
+    // Ensure the container is properly mounted
+    if (!containerRef.current || !containerRef.current.offsetParent) {
+      console.warn("[v0] Map container not properly mounted")
+      return
+    }
+    
+    // Add a small delay to ensure the container is fully rendered
+    const initMap = async () => {
+      // Double-check the container is still available
+      if (!containerRef.current) {
+        console.warn("[v0] Map container disappeared during initialization")
+        return
+      }
+      
+      let maps: any
       try {
         maps = await loadGoogleMaps()
+        setMapsError(null)
         const theme = getComputedStyle(document.documentElement)
         const primary = theme.getPropertyValue("--color-primary")?.trim() || "#00e5ff"
         const accent = theme.getPropertyValue("--color-chart-2")?.trim() || "#ff3fd8"
 
-        const map = new maps.Map(containerRef.current!, {
+        if (!containerRef.current) {
+          console.warn("[v0] Map container not ready")
+          return
+        }
+        
+        const map = new maps.Map(containerRef.current, {
           center: { lat: 20, lng: 0 },
           zoom: 2,
           disableDefaultUI: true,
@@ -307,8 +379,12 @@ export default function MapHologramSection() {
         setMapReady(true)
       } catch (err) {
         console.error("[v0] Google Maps globe init error:", (err as Error).message)
+        setMapsError("Google Maps is not available. Please configure your API key.")
       }
-    })()
+    }
+    
+    // Add a small delay to ensure the container is fully rendered
+    setTimeout(initMap, 100)
   }, [hasQuery])
 
   useEffect(() => {
@@ -603,6 +679,34 @@ export default function MapHologramSection() {
           {!hasQuery ? (
             <div className="h-[52vh] sm:h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg border holo-border glass">
               <FancyGlobe onApi={(api) => (globeApiRef.current = api)} />
+            </div>
+          ) : mapsError ? (
+            <div className="h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg border holo-border glass flex items-center justify-center p-8">
+              <div className="text-center space-y-4">
+                <div className="text-6xl">🗺️</div>
+                <h3 className="text-xl font-semibold text-blue-50">Google Maps Not Available</h3>
+                <p className="text-gray-400 max-w-md">
+                  {mapsError}
+                </p>
+                <div className="space-y-2 text-sm text-gray-500">
+                  <p>To enable Google Maps:</p>
+                  <ol className="list-decimal list-inside space-y-1 text-left">
+                    <li>Get a Google Maps API key from Google Cloud Console</li>
+                    <li>Enable billing for your project</li>
+                    <li>Add localhost:3000 to allowed referrers</li>
+                    <li>Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file</li>
+                  </ol>
+                </div>
+                <Button 
+                  onClick={() => {
+                    setHasQuery(false)
+                    setMapsError(null)
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Back to Globe
+                </Button>
+              </div>
             </div>
           ) : (
             <div
