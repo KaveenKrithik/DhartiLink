@@ -20,7 +20,9 @@ export default function Page() {
           <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
             <div className="flex flex-col items-start gap-6">
               <p className="text-xs tracking-[0.35em] text-accent-foreground/80">INTRODUCING</p>
-              <TitleTransition />
+              <div className="relative">
+                <TitleTransition />
+              </div>
               <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
                 Instant ownership verification, transparent transfers, and open digital bidding—powered by blockchain,
                 geospatial mapping, and digitized records for India's land economy.

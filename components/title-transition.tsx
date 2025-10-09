@@ -33,8 +33,8 @@ export default function TitleTransition() {
         setIsTransitioning(true)
         setTimeout(() => {
           setShowMainTitle(true)
-        }, 1500) // Smooth transition
-      }, 1000) // Start drift after 1 second
+        }, 1000) // Faster transition
+      }, 800) // Start drift sooner
     }, 4000) // After loading screen duration
 
     return () => clearTimeout(transitionTimer)
@@ -53,19 +53,27 @@ export default function TitleTransition() {
 
   if (!showMainTitle) {
     return (
-      <div 
-        ref={titleRef}
-        className={`fixed inset-0 z-[60] bg-black flex transition-all duration-1500 ease-in-out ${
-          isDrifting 
-            ? 'items-start justify-start pt-20 pl-6 scale-75' 
-            : 'items-center justify-center scale-100'
-        } ${
-          isTransitioning ? 'opacity-0' : 'opacity-100'
-        }`}
-        style={{
-          transition: 'all 1.5s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}
-      >
+      <>
+        {/* Background overlay that fades out */}
+        <div 
+          className={`fixed inset-0 z-[50] bg-black transition-opacity duration-1000 ${
+            isTransitioning ? 'opacity-0' : 'opacity-100'
+          }`}
+        />
+        {/* Title container */}
+        <div 
+          ref={titleRef}
+          className={`fixed inset-0 z-[60] flex transition-all duration-1000 ease-out ${
+            isDrifting 
+              ? 'items-start justify-start pt-20 pl-6 scale-75' 
+              : 'items-center justify-center scale-100'
+          } ${
+            isTransitioning ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          style={{
+            transition: 'all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+          }}
+        >
         <div className="text-center">
           <div className="text-xs tracking-[0.35em] text-gray-400 mb-8">INITIALIZING</div>
           <div className="relative">
@@ -114,7 +122,8 @@ export default function TitleTransition() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </>
     )
   }
 
