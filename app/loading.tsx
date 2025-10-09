@@ -7,7 +7,7 @@ export default function Loading() {
           <div className="holo-spinner" aria-hidden="true" />
           <div className="text-center">
             <div className="text-xs tracking-[0.35em] text-accent-foreground/80">LOADING</div>
-            <h1 className="holo-glow mt-1 text-3xl font-semibold md:text-4xl">DartiLink</h1>
+            <h1 className="holo-glow mt-1 text-3xl font-semibold md:text-4xl">DhartiLink</h1>
             <p className="mt-1 text-xs text-muted-foreground">Preparing the hologram interface…</p>
           </div>
         </div>

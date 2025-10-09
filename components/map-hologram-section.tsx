@@ -317,7 +317,7 @@ export default function MapHologramSection() {
       {!hasQuery && (
         <div className="mx-auto max-w-4xl px-6 py-10 md:py-14">
           <div className="glass holo-border scanlines rounded-lg p-6">
-            <h2 className="text-balance text-2xl font-semibold holo-glow">DartiLink Parcel Search</h2>
+            <h2 className="text-balance text-2xl font-semibold holo-glow">DhartiLink Parcel Search</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Provide any one: Parcel ID, Owner name, or Address/Area. We’ll locate the parcel and reveal its hologram.
             </p>

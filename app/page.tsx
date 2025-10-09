@@ -20,7 +20,7 @@ export default function Page() {
             <div className="flex flex-col items-start gap-6">
               <p className="text-xs tracking-[0.35em] text-accent-foreground/80">INTRODUCING</p>
               <h1 className="text-pretty text-4xl font-semibold tracking-tight md:text-6xl holo-glow">
-                DartiLink — UPI for Land Ownership
+                DhartiLink — UPI for Land Ownership
               </h1>
               <p className="text-pretty text-base leading-relaxed text-muted-foreground md:text-lg">
                 Instant ownership verification, transparent transfers, and open digital bidding—powered by blockchain,

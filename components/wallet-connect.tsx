@@ -65,7 +65,7 @@ export function WalletConnect() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Connect your MetaMask wallet to access DartiLink features
+            Connect your MetaMask wallet to access DhartiLink features
           </p>
           <Button 
             onClick={handleConnect} 

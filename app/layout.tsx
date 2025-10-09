@@ -8,9 +8,9 @@ import "./globals.css"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "DartiLink — UPI for Land Ownership",
+  title: "DhartiLink — UPI for Land Ownership",
   description:
-    "DartiLink brings trust, speed, and accessibility to land ownership with blockchain proofs, geospatial mapping, and open digital bidding.",
+    "DhartiLink brings trust, speed, and accessibility to land ownership with blockchain proofs, geospatial mapping, and open digital bidding.",
   generator: "v0.app",
 }
 
