@@ -41,6 +41,17 @@ export default function MainPageContent() {
 
   return (
     <main className={`min-h-screen bg-black transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Reset KYC Button - Only in Main Page */}
+      <button 
+        onClick={() => {
+          localStorage.removeItem('kyc_verified')
+          window.location.reload()
+        }}
+        className="fixed top-4 right-4 z-50 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+      >
+        Reset KYC
+      </button>
+      
       <header className="relative overflow-hidden">
         <div className="holo-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden="true" />
         <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
