@@ -15,6 +15,9 @@ export default function Page() {
     // Check if KYC is already verified
     const isKYCVerified = localStorage.getItem('kyc_verified') === 'true'
     
+    // For testing: Uncomment the line below to always show KYC
+    // localStorage.removeItem('kyc_verified')
+    
     if (isKYCVerified) {
       // Skip KYC, go directly to main page
       setShowKYC(false)
@@ -47,7 +50,19 @@ export default function Page() {
   if (showMain) {
     return (
       <WalletProvider>
-        <MainPageContent />
+        <div className="relative">
+          {/* Temporary KYC Reset Button for Testing */}
+          <button 
+            onClick={() => {
+              localStorage.removeItem('kyc_verified')
+              window.location.reload()
+            }}
+            className="fixed top-4 right-4 z-50 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+          >
+            Reset KYC
+          </button>
+          <MainPageContent />
+        </div>
       </WalletProvider>
     )
   }

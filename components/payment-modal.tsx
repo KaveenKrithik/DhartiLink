@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useWalletContext } from '@/contexts/wallet-context'
 import { PurchaseSuccess } from '@/components/purchase-success'
+import DhartiPaySuccess from '@/components/dharti-pay-success'
 import { Landmark, Send, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -36,6 +37,7 @@ export function PaymentModal({
   const [message, setMessage] = useState('')
   const [txHash, setTxHash] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showDhartiPay, setShowDhartiPay] = useState(false)
 
   const handlePayment = async () => {
     if (!isConnected || !account) {
@@ -62,14 +64,8 @@ export function PaymentModal({
         toast.success(`Transaction Hash: ${hash}`)
         // Close the modal first
         setIsOpen(false)
-        // Call the purchase success callback
-        if (onPurchaseSuccess) {
-          onPurchaseSuccess()
-        }
-        // Show success page after a short delay
-        setTimeout(() => {
-          setShowSuccess(true)
-        }, 100)
+        // Show DhartiPay animation
+        setShowDhartiPay(true)
       } else {
         throw new Error('Transaction failed')
       }
@@ -85,6 +81,21 @@ export function PaymentModal({
     setIsOpen(false)
     setTxHash(null)
     setMessage('')
+  }
+
+  // Show DhartiPay animation if payment was successful
+  if (showDhartiPay) {
+    return (
+      <DhartiPaySuccess 
+        onComplete={() => {
+          setShowDhartiPay(false)
+          setShowSuccess(true)
+          if (onPurchaseSuccess) {
+            onPurchaseSuccess()
+          }
+        }} 
+      />
+    )
   }
 
   // Show success page if transaction was successful

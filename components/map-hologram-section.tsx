@@ -382,7 +382,7 @@ export default function MapHologramSection() {
         const errorMessage = (err as Error).message
         
         if (errorMessage.includes('BillingNotEnabledMapError')) {
-          setMapsError("Google Maps billing is not enabled. Please enable billing in your Google Cloud Console to use the Maps API.")
+          setMapsError("Google Maps billing is not enabled. Please enable billing in your Google Cloud Console to use the Maps API. Check GOOGLE_MAPS_BILLING_SETUP.md for detailed instructions.")
         } else if (errorMessage.includes('RefererNotAllowedMapError')) {
           setMapsError("This domain is not authorized to use the Google Maps API. Please add localhost:3000 to your allowed referrers.")
         } else if (errorMessage.includes('API key not configured')) {

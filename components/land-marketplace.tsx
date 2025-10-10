@@ -965,13 +965,13 @@ export function LandMarketplace() {
                     toast.success(`Successfully purchased ${listing.title}!`)
                     toast.success('Land added to your portfolio')
                     
-                    // Redirect to portfolio tab immediately
+                    // Redirect to marketplace tab after DhartiPay animation
                     setTimeout(() => {
-                      const portfolioButton = document.querySelector('[data-value="portfolio"]')
-                      if (portfolioButton) {
-                        (portfolioButton as HTMLElement).click()
+                      const marketplaceButton = document.querySelector('[data-value="marketplace"]')
+                      if (marketplaceButton) {
+                        (marketplaceButton as HTMLElement).click()
                       }
-                    }, 100)
+                    }, 5000) // Wait for DhartiPay animation to complete
                   }}
                 >
                   <Button className="w-full bg-blue-600 hover:bg-blue-700 flex items-center gap-2">
