@@ -160,6 +160,9 @@ export default function WalletPage() {
       // Show success message
       setStatus(`Token ${tokenId} added to portfolio successfully!`)
       
+      // Navigate to portfolio section on main page
+      router.push('/#portfolio')
+      
     } catch (e) {
       console.error('Error adding to portfolio:', e)
       setStatus('Error adding token to portfolio')
