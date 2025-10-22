@@ -11,8 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import dynamic from "next/dynamic"
 import { useSoundManager } from "@/components/sound-manager"
+import { supabase } from "@/lib/supabase-client"
 
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyCVzTgaYCdrtau2c8WkVQSJjaruwjqDu1k"
+const GOOGLE_MAPS_API_KEY = "AIzaSyCL2LQdzss5ZsXPCpaJVRT8QurIr7q_EgE"
 
 // Debug: Log the API key status
 if (typeof window !== 'undefined') {
@@ -115,133 +116,106 @@ export default function MapHologramSection() {
     [],
   )
 
-  // Dummy parcel data
-  const geojson = useMemo<FeatureRecord[]>(() => {
-    const base = { lat: 12.9716, lng: 77.5946 }
-    const square = (dx: number, dy: number, size = 0.002) => [
-      { lat: base.lat + dy, lng: base.lng + dx },
-      { lat: base.lat + dy, lng: base.lng + dx + size },
-      { lat: base.lat + dy + size, lng: base.lng + dx + size },
-      { lat: base.lat + dy + size, lng: base.lng + dx },
-    ]
-    const mk = (id: string, owner: string, dx: number, dy: number, areaSqM: number): FeatureRecord => ({
-      path: square(dx, dy),
-      properties: {
-        id,
-        owner,
-        areaSqM,
-        jurisdiction: "BBMP · Karnataka",
-        encumbrances: id.endsWith("2") ? ["Bank Lien: KBL-2024-19"] : [],
-        chainAssetId: `parcel:${id}:l2-rollup-01`,
-        docDigest: `0x${btoa(id).slice(0, 6)}…${btoa(owner).slice(-6)}`,
-      },
-    })
+  // Parcels derived from Supabase coordinates (no dummy data)
+  const [geojson, setGeojson] = useState<FeatureRecord[]>([])
 
-    const features: FeatureRecord[] = []
-    // Seed a few hand-placed parcels
-    features.push(
-      mk("KA-BLR-1001", "Anita Rao", 0.0, 0.0, 980),
-      mk("KA-BLR-1002", "Rahul Singh", 0.004, 0.003, 1125),
-      mk("KA-BLR-1003", "Lalita Mehta", -0.004, -0.0035, 870),
-    )
-
-    // Deterministic grid of parcels around the base (up to ~50 total)
-    const ownerNames = [
-      "Arjun Rao", "Meera Nair", "Kiran Reddy", "Priya Sharma", "Vikas Gupta",
-      "Ananya Sharma", "Rohit Kumar", "Neha Verma", "Sanjay Mehta", "Dhruv Shah",
-      "Pooja Jain", "Harpreet Singh", "Amit Patel", "Rajesh Kumar", "Lalita Mehta",
-      "Imran Khan", "Tanya Malik", "Kabir Thakur", "Ritika Kapoor", "Shalini Joshi",
-    ]
-
-    // Generate KA-BLR-1004 .. KA-BLR-1050
-    for (let idx = 1004; idx <= 1050; idx++) {
-      const i = idx - 1000 // 4..50
-      const gx = (i % 10) - 5 // -5..4
-      const gy = Math.floor(i / 10) - 2 // -2..3
-      const dx = gx * 0.004
-      const dy = gy * 0.0035
-      const areaSqM = 800 + ((i * 37) % 600) // 800..1399
-      const owner = ownerNames[(i + 3) % ownerNames.length]
-      features.push(mk(`KA-BLR-${idx}`, owner, dx, dy, areaSqM))
+  useEffect(() => {
+    const loadParcels = async () => {
+      try {
+        if (!supabase) return
+        const { data, error } = await supabase
+          .from('property_listings')
+          .select('id, seller_name, coordinates')
+        if (error) {
+          console.warn('[Map] Failed to load parcels from Supabase:', error)
+          return
+        }
+        const features: FeatureRecord[] = []
+        const size = 0.0008 // ~small square around the point
+        for (const row of (data || [])) {
+          const c = (row as any).coordinates
+          
+          // Try different coordinate formats
+          let coords: number[] | null = null
+          
+          if (c && typeof c === 'object') {
+            // PostGIS GeoJSON format: { coordinates: [lng, lat] }
+            if (Array.isArray((c as any).coordinates)) {
+              coords = (c as any).coordinates
+            }
+            // Direct array format: [lng, lat]
+            else if (Array.isArray(c)) {
+              coords = c
+            }
+            // Object with lat/lng properties: { lat: number, lng: number }
+            else if (typeof (c as any).lat === 'number' && typeof (c as any).lng === 'number') {
+              coords = [(c as any).lng, (c as any).lat]
+            }
+            // Object with lon/lat properties: { lat: number, lon: number }
+            else if (typeof (c as any).lat === 'number' && typeof (c as any).lon === 'number') {
+              coords = [(c as any).lon, (c as any).lat]
+            }
+          }
+          // PostGIS Geography WKB format (hex string)
+          else if (typeof c === 'string' && c.startsWith('0101000020E6100000')) {
+            try {
+              // Parse WKB hex string to get coordinates
+              const hexCoords = c.slice(18) // Remove the WKB header
+              const lngHex = hexCoords.slice(0, 16)
+              const latHex = hexCoords.slice(16, 32)
+              
+              // Convert hex to float (little-endian) - browser compatible
+              const lngBytes = new Uint8Array(8)
+              const latBytes = new Uint8Array(8)
+              
+              for (let i = 0; i < 8; i++) {
+                lngBytes[i] = parseInt(lngHex.slice(i * 2, i * 2 + 2), 16)
+                latBytes[i] = parseInt(latHex.slice(i * 2, i * 2 + 2), 16)
+              }
+              
+              const lngView = new DataView(lngBytes.buffer)
+              const latView = new DataView(latBytes.buffer)
+              
+              const lng = lngView.getFloat64(0, true) // little-endian
+              const lat = latView.getFloat64(0, true) // little-endian
+              
+              coords = [lng, lat]
+            } catch (wkbErr) {
+              console.warn(`[Map] Failed to parse WKB coordinates for ${(row as any).id}:`, (wkbErr as Error).message)
+            }
+          }
+          
+          if (coords && coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            const lng = coords[0]
+            const lat = coords[1]
+            const square = [
+              { lat: lat, lng: lng },
+              { lat: lat, lng: lng + size },
+              { lat: lat + size, lng: lng + size },
+              { lat: lat + size, lng: lng },
+            ]
+            features.push({
+              path: square,
+              properties: {
+                id: (row as any).id,
+                owner: (row as any).seller_name || 'Unknown',
+                areaSqM: 0,
+                jurisdiction: '',
+                encumbrances: [],
+                chainAssetId: `parcel:${(row as any).id}`,
+                docDigest: '',
+              }
+            })
+          } else {
+            console.warn(`[Map] Skipping parcel ${(row as any).id} - invalid coordinates:`, c)
+          }
+        }
+        setGeojson(features)
+      } catch (e) {
+        console.warn('[Map] Parcels load error:', (e as Error).message)
+      }
     }
-
-    // --- Chennai cluster (TN-CHN) ---
-    // Center near Chennai and push ~20 parcels around it
-    const chennaiBase = { lat: 13.0827, lng: 80.2707 }
-    const chSquare = (dx: number, dy: number, size = 0.002) => [
-      { lat: chennaiBase.lat + dy, lng: chennaiBase.lng + dx },
-      { lat: chennaiBase.lat + dy, lng: chennaiBase.lng + dx + size },
-      { lat: chennaiBase.lat + dy + size, lng: chennaiBase.lng + dx + size },
-      { lat: chennaiBase.lat + dy + size, lng: chennaiBase.lng + dx },
-    ]
-    const mkCh = (id: string, owner: string, dx: number, dy: number, areaSqM: number): FeatureRecord => ({
-      path: chSquare(dx, dy),
-      properties: {
-        id,
-        owner,
-        areaSqM,
-        jurisdiction: "Greater Chennai · Tamil Nadu",
-        encumbrances: id.endsWith("7") ? ["Encumbrance: EC-2024-07"] : [],
-        chainAssetId: `parcel:${id}:l2-rollup-01`,
-        docDigest: `0x${btoa(id).slice(0, 6)}…${btoa(owner).slice(-6)}`,
-      },
-    })
-
-    const chOwners = [
-      "S. Karthik",
-      "P. Lakshmi",
-      "R. Srinivasan",
-      "A. Priyanka",
-      "V. Bharath",
-      "N. Keerthana",
-      "M. Aravind",
-      "T. Divya",
-      "G. Prakash",
-      "K. Nithya",
-      "D. Vignesh",
-      "S. Sandhya",
-      "R. Harish",
-      "A. Meenakshi",
-      "V. Sanjay",
-      "K. Gayathri",
-      "M. Naveen",
-      "P. Anitha",
-      "S. Dinesh",
-      "R. Kavya",
-    ]
-
-    let chIdx = 2001
-    const chGrid: Array<{ gx: number; gy: number }> = [
-      { gx: -3, gy: -2 },
-      { gx: -1, gy: -2 },
-      { gx: 1, gy: -2 },
-      { gx: 3, gy: -2 },
-      { gx: -4, gy: -1 },
-      { gx: -2, gy: -1 },
-      { gx: 0, gy: -1 },
-      { gx: 2, gy: -1 },
-      { gx: 4, gy: -1 },
-      { gx: -3, gy: 0 },
-      { gx: -1, gy: 0 },
-      { gx: 1, gy: 0 },
-      { gx: 3, gy: 0 },
-      { gx: -4, gy: 1 },
-      { gx: -2, gy: 1 },
-      { gx: 0, gy: 1 },
-      { gx: 2, gy: 1 },
-      { gx: 4, gy: 1 },
-      { gx: -1, gy: 2 },
-      { gx: 1, gy: 2 },
-    ]
-    chGrid.forEach((g, i) => {
-      const dx = g.gx * 0.004
-      const dy = g.gy * 0.0035
-      const areaSqM = 900 + ((i * 53) % 700)
-      const owner = chOwners[i % chOwners.length]
-      features.push(mkCh(`TN-CHN-${chIdx++}`, owner, dx, dy, areaSqM))
-    })
-
-    return features
+    loadParcels()
   }, [])
 
   // Initialize Places Autocomplete on the address input
@@ -308,10 +282,10 @@ export default function MapHologramSection() {
       }
     }
 
-    window.addEventListener('portfolioLandSearch', handlePortfolioLandSearch as EventListener)
+    window.addEventListener('portfolioLandSearch', handlePortfolioLandSearch as unknown as EventListener)
     
     return () => {
-      window.removeEventListener('portfolioLandSearch', handlePortfolioLandSearch as EventListener)
+      window.removeEventListener('portfolioLandSearch', handlePortfolioLandSearch as unknown as EventListener)
     }
   }, [playMapSearch])
 
@@ -468,9 +442,22 @@ export default function MapHologramSection() {
         } catch {}
       }
 
+      // Handle parcel search highlighting
       if (searchResult?.parcelId) {
         const target = geojson.find((g) => g.properties.id === searchResult.parcelId)
         if (target) {
+          // Find and highlight the polygon for this parcel
+          const targetPolygon = polygons.find((poly) => (poly as any).__parcelId === searchResult.parcelId)
+          if (targetPolygon) {
+            // Enhanced highlighting for searched parcel
+            targetPolygon.setOptions({
+              strokeWeight: 4,
+              strokeOpacity: 1.0,
+              fillOpacity: 0.35,
+              strokeColor: "#ff6b35", // Orange highlight
+            })
+          }
+          
           const bounds = new maps.LatLngBounds()
           for (const p of target.path) bounds.extend(p)
           flyToBounds(bounds)
@@ -481,6 +468,43 @@ export default function MapHologramSection() {
             { lat: 0, lng: 0 },
           )
           pulseAt(centroid.lat, centroid.lng)
+        } else {
+          // Fallback: create temporary highlight polygon if coordinates exist but parcel not in geojson
+          if (searchResult?.targetLatLng) {
+            const size = 0.0008
+            const { lat, lng } = searchResult.targetLatLng
+            const tempPolygon = new maps.Polygon({
+              paths: [
+                { lat: lat, lng: lng },
+                { lat: lat, lng: lng + size },
+                { lat: lat + size, lng: lng + size },
+                { lat: lat + size, lng: lng },
+              ],
+              strokeColor: "#ff6b35",
+              strokeOpacity: 1.0,
+              strokeWeight: 4,
+              fillColor: "#ff6b35",
+              fillOpacity: 0.25,
+              map,
+            })
+            polygons.push(tempPolygon)
+            
+            map.setCenter(searchResult.targetLatLng)
+            map.setZoom(16)
+            pulseAt(lat, lng)
+            
+            // Create a temporary parcel object for display
+            setSelected({
+              id: searchResult.parcelId,
+              owner: 'Unknown',
+              areaSqM: 0,
+              jurisdiction: '',
+              encumbrances: [],
+              chainAssetId: `parcel:${searchResult.parcelId}`,
+              docDigest: '',
+            })
+            setVisible(true)
+          }
         }
       } else if (searchResult?.targetLatLng && window.google?.maps?.geometry?.poly) {
         const point = new maps.LatLng(searchResult.targetLatLng)
@@ -489,6 +513,14 @@ export default function MapHologramSection() {
           const id = (maybe as any).__parcelId as string
           const target = geojson.find((g) => g.properties.id === id)
           if (target) {
+            // Highlight the polygon
+            maybe.setOptions({
+              strokeWeight: 4,
+              strokeOpacity: 1.0,
+              fillOpacity: 0.35,
+              strokeColor: "#ff6b35",
+            })
+            
             const bounds = new maps.LatLngBounds()
             for (const p of target.path) bounds.extend(p)
             flyToBounds(bounds)
@@ -498,6 +530,7 @@ export default function MapHologramSection() {
         } else {
           map.setCenter(searchResult.targetLatLng)
           map.setZoom(16)
+          pulseAt(searchResult.targetLatLng.lat, searchResult.targetLatLng.lng)
         }
       }
 
@@ -509,8 +542,7 @@ export default function MapHologramSection() {
     } catch (err) {
       console.error("[v0] parcel overlay error:", (err as Error).message)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, hasQuery])
+  }, [mapReady, hasQuery, searchResult, geojson])
 
   // IntersectionObserver still controls the hologram reveal effect
   useEffect(() => {
@@ -535,43 +567,134 @@ export default function MapHologramSection() {
     const addr = addrRef.current?.value?.trim() || ""
     const parcel = parcelRef.current?.value?.trim() || ""
 
-    const findByParcel =
-      parcel && geojson.find((g) => g.properties.id.toLowerCase().includes(parcel.toLowerCase()))?.properties.id
-
-    const findByOwner =
-      !findByParcel &&
-      owner &&
-      geojson.find((g) => g.properties.owner.toLowerCase().includes(owner.toLowerCase()))?.properties.id
-
     let targetLatLng: { lat: number; lng: number } | undefined
-    const parcelId: string | undefined = findByParcel || findByOwner || undefined
+    let parcelId: string | undefined
+
+    // Try Supabase-backed search first
+    try {
+      if (supabase) {
+        let query = supabase.from('property_listings').select('id, seller_name, location, coordinates').limit(1)
+        if (parcel) {
+          query = query.eq('id', parcel)
+        } else if (owner) {
+          query = query.ilike('seller_name', `%${owner}%`)
+        } else if (addr) {
+          query = query.ilike('location', `%${addr}%`)
+        }
+
+        const { data, error } = await query
+        if (error) {
+          console.warn('[Map] Supabase search error:', error)
+          setSearchError(`Database error: ${error.message}`)
+          return
+        } else if (data && data.length > 0) {
+          const row: any = data[0]
+          parcelId = row.id
+          const c = row.coordinates
+          console.log(`[Map] Debug coordinates for parcel ${row.id}:`, c)
+          
+          // Try different coordinate formats
+          let coords: number[] | null = null
+          
+          if (c && typeof c === 'object') {
+            // PostGIS GeoJSON format: { coordinates: [lng, lat] }
+            if (Array.isArray((c as any).coordinates)) {
+              coords = (c as any).coordinates
+            }
+            // Direct array format: [lng, lat]
+            else if (Array.isArray(c)) {
+              coords = c
+            }
+            // Object with lat/lng properties: { lat: number, lng: number }
+            else if (typeof (c as any).lat === 'number' && typeof (c as any).lng === 'number') {
+              coords = [(c as any).lng, (c as any).lat]
+            }
+            // Object with lon/lat properties: { lat: number, lon: number }
+            else if (typeof (c as any).lat === 'number' && typeof (c as any).lon === 'number') {
+              coords = [(c as any).lon, (c as any).lat]
+            }
+          }
+          // PostGIS Geography WKB format (hex string)
+          else if (typeof c === 'string' && c.startsWith('0101000020E6100000')) {
+            try {
+              // Parse WKB hex string to get coordinates
+              // WKB format: 0101000020E6100000 + 16 hex chars for lng + 16 hex chars for lat
+              const hexCoords = c.slice(18) // Remove the WKB header
+              const lngHex = hexCoords.slice(0, 16)
+              const latHex = hexCoords.slice(16, 32)
+              
+              // Convert hex to float (little-endian) - browser compatible
+              const lngBytes = new Uint8Array(8)
+              const latBytes = new Uint8Array(8)
+              
+              for (let i = 0; i < 8; i++) {
+                lngBytes[i] = parseInt(lngHex.slice(i * 2, i * 2 + 2), 16)
+                latBytes[i] = parseInt(latHex.slice(i * 2, i * 2 + 2), 16)
+              }
+              
+              const lngView = new DataView(lngBytes.buffer)
+              const latView = new DataView(latBytes.buffer)
+              
+              const lng = lngView.getFloat64(0, true) // little-endian
+              const lat = latView.getFloat64(0, true) // little-endian
+              
+              coords = [lng, lat]
+              console.log(`[Map] Parsed WKB coordinates for ${parcelId}: lat=${lat}, lng=${lng}`)
+            } catch (wkbErr) {
+              console.warn(`[Map] Failed to parse WKB coordinates for ${parcelId}:`, (wkbErr as Error).message)
+            }
+          }
+          
+          if (coords && coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+            const lng = coords[0]
+            const lat = coords[1]
+            targetLatLng = { lat, lng }
+            console.log(`[Map] Extracted coordinates for ${parcelId}: lat=${lat}, lng=${lng}`)
+          } else {
+            console.warn(`[Map] Invalid coordinates format for parcel ${parcelId}:`, c)
+          }
+          // Only use coordinates from database - no geocoding
+          
+          // Check if we have valid coordinates
+          if (!targetLatLng) {
+            setSearchError(`Parcel "${parcelId}" found but coordinates are missing or invalid.`)
+            return
+          }
+        } else {
+          // No results found
+          if (parcel) {
+            setSearchError(`Parcel ID "${parcel}" not found in database.`)
+          } else if (owner) {
+            setSearchError(`No parcels found for owner "${owner}".`)
+          } else if (addr) {
+            setSearchError(`No parcels found for location "${addr}".`)
+          }
+          return
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[Map] Supabase lookup failed:', (sbErr as Error).message)
+      setSearchError(`Database connection failed: ${(sbErr as Error).message}`)
+      return
+    }
+
+    // Fallback to existing dummy-geojson matching if still unresolved
+    if (!parcelId && parcel) {
+      const match = geojson.find((g) => g.properties.id.toLowerCase().includes(parcel.toLowerCase()))?.properties.id
+      if (match) parcelId = match
+    }
+    if (!parcelId && owner) {
+      const match = geojson.find((g) => g.properties.owner.toLowerCase().includes(owner.toLowerCase()))?.properties.id
+      if (match) parcelId = match
+    }
 
     try {
       const maps = await loadGoogleMaps()
 
-      // Prefer Autocomplete selection if any
-      if (!parcelId) {
-        const place = placeResultRef.current
-        if (place?.geometry?.location) {
-          const loc = place.geometry.location
-          targetLatLng = { lat: loc.lat(), lng: loc.lng() }
-        } else if (addr) {
-          try {
-            const geocoder = new maps.Geocoder()
-            const resp = await geocoder.geocode({ address: addr })
-            const best = resp?.results?.[0]
-            if (best?.geometry?.location) {
-              const loc = best.geometry.location
-              targetLatLng = { lat: loc.lat(), lng: loc.lng() }
-            }
-          } catch (geoErr) {
-            console.warn("[v0] Geocoding failed:", (geoErr as Error).message)
-          }
-        }
-      }
+      // Only use coordinates from database - no geocoding or autocomplete
 
       if (!parcelId && !targetLatLng) {
-        setSearchError("Enter at least Parcel ID, Owner name, or a valid Address.")
+        setSearchError("Enter Parcel ID or Owner name to search.")
         return
       }
 
