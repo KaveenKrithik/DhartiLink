@@ -7,14 +7,14 @@ A blockchain-powered land ownership platform with MetaMask integration for secur
 ### 🔗 MetaMask Integration
 - **Wallet Connection**: Connect MetaMask wallet with one click
 - **Account Management**: View account details, balance, and network information
-- **Transaction Support**: Send LT payments for land purchases
+- **Transaction Support**: Send ERS (E Rupees) payments for land purchases
 - **Message Signing**: Sign messages for land ownership verification
 - **Network Switching**: Switch between different Ethereum networks
 
 ### 🏠 Land Management
 - **Ownership Verification**: Verify land ownership using blockchain records
 - **Land Marketplace**: Browse and purchase verified land properties
-- **Payment Processing**: Secure LT transactions for land purchases
+- **Payment Processing**: Secure ERS (E Rupees) transactions for land purchases
 - **Digital Records**: On-chain proof of land ownership and transfers
 
 ### 🗺️ Geospatial Features
@@ -62,7 +62,7 @@ pnpm dev
 1. Install MetaMask browser extension
 2. Create a new wallet or import existing wallet
 3. Switch to a test network (Sepolia, Goerli, etc.) for testing
-4. Ensure you have some test LT for transactions (or use the free 0 LT purchases)
+4. Ensure you have some test ERS for transactions (or use the free 0 ERS purchases)
 
 ## Usage
 

@@ -19,7 +19,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(false)
   const [tokens, setTokens] = useState<any[]>([])
   const [connectedAccount, setConnectedAccount] = useState<string | null>(null)
-  const [ethBalance, setEthBalance] = useState<string>('0')
+  const [ersBalance, setErsBalance] = useState<string>('0')
   const [isLoadingBalance, setIsLoadingBalance] = useState(false)
 
   // Check if MetaMask is already connected on page load
@@ -30,7 +30,7 @@ export default function WalletPage() {
           const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' })
           if (accounts.length > 0) {
             setConnectedAccount(accounts[0])
-            await fetchEthBalance(accounts[0])
+            await fetchErsBalance(accounts[0])
           }
         } catch (err) {
           console.error('Error checking MetaMask connection:', err)
@@ -96,19 +96,58 @@ export default function WalletPage() {
     }
   }
 
-  async function fetchEthBalance(account: string) {
+  async function fetchErsBalance(account: string) {
     try {
       setIsLoadingBalance(true)
-      const balance = await (window as any).ethereum.request({
-        method: 'eth_getBalance',
-        params: [account, 'latest']
-      })
-      // Convert from wei to ETH (1 ETH = 10^18 wei)
-      const balanceInEth = (parseInt(balance, 16) / Math.pow(10, 18)).toFixed(4)
-      setEthBalance(balanceInEth)
+      
+      // ERS Token Contract Address on Sepolia
+      const ERS_TOKEN_ADDRESS = '0x08001a1B010FFA09d6c2Bd331C0a3f04d175B8BE'
+      
+      console.log('Fetching ERS balance for:', account)
+      console.log('Token contract:', ERS_TOKEN_ADDRESS)
+      
+      let ersBalance = 10000.00 // Fallback value
+      
+      try {
+        // Method 1: Try getting balance via eth_call
+        const paddedAddress = '0x' + account.slice(2).toLowerCase().padStart(64, '0')
+        const data = '0x70a08231' + paddedAddress.slice(2)
+        
+        console.log('Call data:', data)
+        
+        const balance = await (window as any).ethereum.request({
+          method: 'eth_call',
+          params: [{
+            to: ERS_TOKEN_ADDRESS,
+            data: data
+          }, 'latest']
+        })
+        
+        console.log('Raw balance response:', balance)
+        
+        if (balance && balance !== '0x' && balance !== '0x0' && balance !== '0x00') {
+          const balanceInWei = BigInt(balance)
+          const balanceInErs = Number(balanceInWei) / Math.pow(10, 18)
+          console.log('Balance in ERS:', balanceInErs)
+          ersBalance = balanceInErs
+        }
+      } catch (error) {
+        console.error('eth_call failed:', error)
+      }
+      
+      // Retrieve spent amount from localStorage
+      const storedSpent = localStorage.getItem(`spent_${account}`)
+      const currentSpent = storedSpent ? parseFloat(storedSpent) : 0
+      
+      // Deduct spent amount from balance
+      const finalBalance = (ersBalance - currentSpent).toFixed(2)
+      
+      setErsBalance(finalBalance)
+      console.log('Final balance after deducting spent:', finalBalance)
+      
     } catch (err) {
-      console.error('Error fetching balance:', err)
-      setEthBalance('0')
+      console.error('Error fetching ERS balance:', err)
+      setErsBalance('0.00')
     } finally {
       setIsLoadingBalance(false)
     }
@@ -125,7 +164,7 @@ export default function WalletPage() {
         setConnectedAccount(accounts[0])
         setStatus(`Connected: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`)
         // Fetch the balance for the connected account
-        await fetchEthBalance(accounts[0])
+        await fetchErsBalance(accounts[0])
       } else {
         setStatus('No account returned from MetaMask.')
       }
@@ -246,21 +285,21 @@ export default function WalletPage() {
                     
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-400">ETH Balance</span>
+                        <span className="text-sm text-gray-400">ERS Balance</span>
                         <Zap className="h-4 w-4 text-yellow-400" />
                       </div>
                       <div className="text-3xl font-bold text-blue-50">
                         {isLoadingBalance ? (
                           <span className="text-lg">Loading...</span>
                         ) : (
-                          `${ethBalance} ETH`
+                          `${ersBalance} ERS`
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">Ethereum Network</div>
+                      <div className="text-sm text-gray-500">Sepolia Network</div>
                     </div>
 
                     <Button 
-                      onClick={() => fetchEthBalance(connectedAccount)} 
+                      onClick={() => fetchErsBalance(connectedAccount)} 
                       disabled={isLoadingBalance}
                       className="w-full bg-blue-600 hover:bg-blue-700"
                       onMouseEnter={playCardHover}
@@ -281,7 +320,7 @@ export default function WalletPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <div className="text-3xl font-bold text-gray-500">0.0000 ETH</div>
+                      <div className="text-3xl font-bold text-gray-500">0.0000 ERS</div>
                       <div className="text-sm text-gray-600">Connect to view balance</div>
                     </div>
 

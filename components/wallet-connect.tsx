@@ -94,6 +94,59 @@ export function WalletConnect() {
     }
   }
 
+  const handleSwitchToSepolia = async () => {
+    playButtonClick()
+    try {
+      const eth = (window as any)?.ethereum
+      if (!eth) {
+        toast.error('MetaMask not found')
+        return
+      }
+
+      try {
+        // Try to switch to Sepolia (Chain ID: 11155111 = 0xaa36a7)
+        await eth.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }],
+        })
+        toast.success('Switched to Sepolia network!')
+        // Reconnect to refresh the state
+        setTimeout(() => connect(), 500)
+      } catch (switchError: any) {
+        // This error code indicates that the chain has not been added to MetaMask
+        if (switchError.code === 4902) {
+          try {
+            await eth.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                  chainId: '0xaa36a7',
+                  chainName: 'Sepolia Testnet',
+                  rpcUrls: ['https://sepolia.infura.io/v3/'],
+                  nativeCurrency: {
+                    name: 'Sepolia ETH',
+                    symbol: 'ETH',
+                    decimals: 18,
+                  },
+                  blockExplorerUrls: ['https://sepolia.etherscan.io'],
+                },
+              ],
+            })
+            toast.success('Sepolia network added and switched!')
+            setTimeout(() => connect(), 500)
+          } catch (addError) {
+            toast.error('Failed to add Sepolia network')
+          }
+        } else {
+          toast.error('Failed to switch network')
+        }
+      }
+    } catch (error) {
+      console.error('Network switch error:', error)
+      toast.error('Failed to switch network')
+    }
+  }
+
   const handleDisconnect = async () => {
     createDisconnectSound()
     disconnect()
@@ -129,6 +182,28 @@ export function WalletConnect() {
     return parseFloat(balance).toFixed(4)
   }
 
+  const getNetworkName = (chainId: string | null) => {
+    if (!chainId) return 'Unknown'
+    switch (chainId) {
+      case '1': return 'Ethereum Mainnet'
+      case '11155111': return 'Sepolia Testnet'
+      case '5': return 'Goerli Testnet'
+      case '137': return 'Polygon'
+      default: return `Chain ${chainId}`
+    }
+  }
+
+  const getEtherscanUrl = (chainId: string | null) => {
+    if (!chainId) return 'https://etherscan.io'
+    switch (chainId) {
+      case '11155111': return 'https://sepolia.etherscan.io'
+      case '5': return 'https://goerli.etherscan.io'
+      default: return 'https://etherscan.io'
+    }
+  }
+
+  const isWrongNetwork = chainId !== '11155111' // Not Sepolia
+
   if (!isConnected) {
     return (
       <Card className="glass holo-border">
@@ -142,14 +217,30 @@ export function WalletConnect() {
           <p className="text-sm text-muted-foreground">
             Connect your MetaMask wallet to access DhartiLink features
           </p>
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="w-full"
-          onMouseEnter={playHover}
-        >
-            {isConnecting ? 'Connecting...' : 'Connect MetaMask'}
-          </Button>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Make sure you're on <strong>Sepolia test network</strong> in MetaMask before connecting
+            </AlertDescription>
+          </Alert>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="flex-1"
+              onMouseEnter={playHover}
+            >
+              {isConnecting ? 'Connecting...' : 'Connect MetaMask'}
+            </Button>
+            <Button
+              onClick={handleSwitchToSepolia}
+              variant="outline"
+              className="flex-1"
+              onMouseEnter={playHover}
+            >
+              Switch to Sepolia
+            </Button>
+          </div>
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -194,23 +285,44 @@ export function WalletConnect() {
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Balance:</span>
             <span className="text-sm font-mono">
-              {formatBalance(balance!)} LT
+              {formatBalance(balance!)} ERS
             </span>
           </div>
           
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Network:</span>
-            <Badge variant="outline">
-              Chain ID: {chainId}
+            <Badge 
+              variant={isWrongNetwork ? "destructive" : "outline"}
+              className={isWrongNetwork ? "bg-red-500/20 text-red-400 border-red-400/30" : ""}
+            >
+              {getNetworkName(chainId)}
             </Badge>
           </div>
         </div>
+
+        {isWrongNetwork && (
+          <div className="space-y-2">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                You're on the wrong network! DhartiLink requires Sepolia testnet.
+              </AlertDescription>
+            </Alert>
+            <Button
+              onClick={handleSwitchToSepolia}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+              onMouseEnter={playHover}
+            >
+              Switch to Sepolia Network
+            </Button>
+          </div>
+        )}
 
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`https://etherscan.io/address/${account}`, '_blank')}
+            onClick={() => window.open(`${getEtherscanUrl(chainId)}/address/${account}`, '_blank')}
             className="flex-1"
           >
             <ExternalLink className="h-3 w-3 mr-1" />

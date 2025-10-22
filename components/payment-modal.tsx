@@ -48,7 +48,7 @@ export function PaymentModal({
     setIsProcessing(true)
     try {
       // Sign the land purchase message
-      const purchaseMessage = `I agree to purchase land ${landId} (${landTitle}) for ${price} LT`
+      const purchaseMessage = `I agree to purchase land ${landId} (${landTitle}) for ${price} ERS`
       const signature = await signMessage(purchaseMessage)
       
       if (!signature) {
@@ -132,7 +132,7 @@ export function PaymentModal({
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Price:</span>
-                <span className="font-mono font-semibold">{price} LT</span>
+                <span className="font-mono font-semibold">{price} ERS</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Seller:</span>
@@ -195,7 +195,7 @@ export function PaymentModal({
               ) : (
                 <>
                   <Send className="h-4 w-4 mr-1" />
-                  Pay {price} LT
+                  Pay {price} ERS
                 </>
               )}
             </Button>

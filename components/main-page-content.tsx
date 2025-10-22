@@ -172,7 +172,7 @@ export default function MainPageContent() {
                   <div className="text-sm space-y-2">
                     <p>• Connect MetaMask wallet</p>
                     <p>• View account balance and details</p>
-                    <p>• Send LT transactions</p>
+                    <p>• Send ERS transactions</p>
                     <p>• Sign messages for verification</p>
                     <p>• Switch between networks</p>
                   </div>
