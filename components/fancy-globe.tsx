@@ -126,11 +126,83 @@ export default function FancyGlobe({ onReady, onApi }: { onReady?: () => void; o
   return (
     <div
       ref={containerRef}
-      className="w-full h-full rounded-lg border holo-border glass relative"
+      className="w-full h-full rounded-lg border border-cyan-500/30 relative overflow-hidden bg-black"
       aria-label="Interactive fancy globe"
       role="img"
     >
-      <div className="pointer-events-none absolute inset-0 rounded-lg shadow-[0_0_24px_-8px_rgba(0,229,255,0.35)_inset]" />
+      {/* Animated stars background */}
+      <div className="absolute inset-0 opacity-60">
+        <div className="stars-layer-1"></div>
+        <div className="stars-layer-2"></div>
+        <div className="stars-layer-3"></div>
+      </div>
+      
+      {/* Nebula effects */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/30 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-blue-500/20 rounded-full blur-[140px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-cyan-500/25 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+      </div>
+      
+      {/* Holographic glow around globe */}
+      <div className="pointer-events-none absolute inset-0 rounded-lg shadow-[0_0_40px_-8px_rgba(0,229,255,0.4)_inset]" />
+      
+      <style jsx>{`
+        .stars-layer-1,
+        .stars-layer-2,
+        .stars-layer-3 {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          background-repeat: repeat;
+        }
+        
+        .stars-layer-1 {
+          background-image: 
+            radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 60px 70px, #fff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 50px 50px, #ddd, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 90px 10px, #eee, rgba(0,0,0,0));
+          background-size: 200px 200px;
+          animation: twinkle-1 5s infinite;
+        }
+        
+        .stars-layer-2 {
+          background-image:
+            radial-gradient(1px 1px at 40px 60px, #fff, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 110px 90px, #ddd, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 160px 40px, #eee, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 70px 120px, #fff, rgba(0,0,0,0));
+          background-size: 180px 180px;
+          animation: twinkle-2 7s infinite;
+        }
+        
+        .stars-layer-3 {
+          background-image:
+            radial-gradient(1px 1px at 30px 90px, #fff, rgba(0,0,0,0)),
+            radial-gradient(2px 2px at 100px 50px, #ddd, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 150px 100px, #eee, rgba(0,0,0,0)),
+            radial-gradient(1px 1px at 80px 30px, #fff, rgba(0,0,0,0));
+          background-size: 220px 220px;
+          animation: twinkle-3 6s infinite;
+        }
+        
+        @keyframes twinkle-1 {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+        
+        @keyframes twinkle-2 {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.8; }
+        }
+        
+        @keyframes twinkle-3 {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.9; }
+        }
+      `}</style>
     </div>
   )
 }

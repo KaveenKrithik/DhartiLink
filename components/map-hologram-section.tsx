@@ -687,7 +687,7 @@ export default function MapHologramSection() {
         <div className="relative">
           {/* Left: render either globe or map for consistent layout */}
           {!hasQuery ? (
-            <div className="h-[52vh] sm:h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg border holo-border glass">
+            <div className="h-[52vh] sm:h-[56vh] md:h-[70vh] w-full overflow-hidden rounded-lg">
               <FancyGlobe onApi={(api) => (globeApiRef.current = api)} />
             </div>
           ) : mapsError ? (
