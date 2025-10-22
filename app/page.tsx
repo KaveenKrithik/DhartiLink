@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react'
 import { WalletProvider } from "@/contexts/wallet-context"
 import MainPageContent from "@/components/main-page-content"
 import SimpleKYC from "@/components/simple-kyc"
-import ClientEntryLoader from "@/components/client-entry-loader"
 
 export default function Page() {
   const [showKYC, setShowKYC] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const [showMain, setShowMain] = useState(false)
 
   useEffect(() => {
@@ -21,26 +19,16 @@ export default function Page() {
     if (isKYCVerified) {
       // Skip KYC, go directly to main page
       setShowKYC(false)
-      setIsLoading(false)
       setShowMain(true)
     } else {
-      // Show loading screen for 4 seconds, then show KYC
-      const timer = setTimeout(() => {
-        setIsLoading(false)
-        setShowKYC(true)
-      }, 4000)
-      
-      return () => clearTimeout(timer)
+      // Show KYC immediately
+      setShowKYC(true)
     }
   }, [])
 
   const handleKYCComplete = () => {
     setShowKYC(false)
     setShowMain(true)
-  }
-
-  if (isLoading) {
-    return <ClientEntryLoader />
   }
 
   if (showKYC) {
