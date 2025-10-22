@@ -74,20 +74,20 @@ export default function PortfolioMapSection() {
                   onMouseEnter={playCardHover}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="text-blue-50 font-semibold text-sm">Land {index + 1}</h4>
+                    <h4 className="text-blue-50 font-semibold text-sm">{land.title}</h4>
                     <Badge className="bg-green-600 text-xs">Owned</Badge>
                   </div>
-                  <p className="text-xs text-gray-400 mb-2">{land.area} • {land.location}</p>
-                  {(land as any).coordinates && Array.isArray((land as any).coordinates) && (
-                    <p className="text-xs text-gray-500 mb-2">
-                      Coordinates: {(land as any).coordinates.map((c: any) => `${c.lat}, ${c.lon}`).join(' · ')}
-                    </p>
-                  )}
-                  {(land as any).sourceFile && (
-                    <p className="text-xs text-gray-500 mb-2">
-                      Source: {(land as any).sourceFile}
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-400 mb-2 line-clamp-2">{land.description}</p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    <MapPin className="h-3 w-3 inline mr-1" />
+                    {land.area} • {land.location}
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Land ID: {land.id}
+                  </p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Purchased: {land.purchaseDate}
+                  </p>
                   <p className="text-xs text-gray-500 mb-3">
                     Owner: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'You'}
                   </p>
