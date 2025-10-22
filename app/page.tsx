@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { WalletProvider } from "@/contexts/wallet-context"
+import { TransactionHistoryProvider } from "@/contexts/transaction-history-context"
 import MainPageContent from "@/components/main-page-content"
 import SimpleKYC from "@/components/simple-kyc"
 
@@ -38,7 +39,9 @@ export default function Page() {
   if (showMain) {
     return (
       <WalletProvider>
-        <MainPageContent />
+        <TransactionHistoryProvider>
+          <MainPageContent />
+        </TransactionHistoryProvider>
       </WalletProvider>
     )
   }

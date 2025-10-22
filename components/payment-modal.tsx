@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useWalletContext } from '@/contexts/wallet-context'
+import { useTransactionHistory } from '@/contexts/transaction-history-context'
 import { PurchaseSuccess } from '@/components/purchase-success'
 import DhartiPaySuccess from '@/components/dharti-pay-success'
 import { Landmark, Send, AlertCircle, CheckCircle } from 'lucide-react'
@@ -32,12 +33,14 @@ export function PaymentModal({
   onPurchaseSuccess
 }: PaymentModalProps) {
   const { isConnected, account, sendTransaction, signMessage } = useWalletContext()
+  const { addTransaction, updateTransactionStatus } = useTransactionHistory()
   const [isOpen, setIsOpen] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [message, setMessage] = useState('')
   const [txHash, setTxHash] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showDhartiPay, setShowDhartiPay] = useState(false)
+  const [currentTxId, setCurrentTxId] = useState<string | null>(null)
 
   const handlePayment = async () => {
     if (!isConnected || !account) {
@@ -46,12 +49,29 @@ export function PaymentModal({
     }
 
     setIsProcessing(true)
+    
+    // Create transaction record
+    const txId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    setCurrentTxId(txId)
+    
+    addTransaction({
+      type: 'purchase',
+      landId,
+      landTitle,
+      amount: price,
+      currency: 'ERS',
+      from: account,
+      to: sellerAddress,
+      status: 'pending',
+    })
+    
     try {
       // Sign the land purchase message
       const purchaseMessage = `I agree to purchase land ${landId} (${landTitle}) for ${price} ERS`
       const signature = await signMessage(purchaseMessage)
       
       if (!signature) {
+        updateTransactionStatus(txId, 'failed')
         throw new Error('Failed to sign transaction')
       }
 
@@ -60,17 +80,24 @@ export function PaymentModal({
       
       if (hash) {
         setTxHash(hash)
+        updateTransactionStatus(txId, 'completed', hash)
         toast.success('Transaction successful!')
         toast.success(`Transaction Hash: ${hash}`)
+        console.log('View on Etherscan:', `https://sepolia.etherscan.io/tx/${hash}`)
+        
         // Close the modal first
         setIsOpen(false)
         // Show DhartiPay animation
         setShowDhartiPay(true)
       } else {
+        updateTransactionStatus(txId, 'failed')
         throw new Error('Transaction failed')
       }
     } catch (error: any) {
       console.error('Payment failed:', error)
+      if (txId) {
+        updateTransactionStatus(txId, 'failed')
+      }
       toast.error(error.message || 'Payment failed')
     } finally {
       setIsProcessing(false)
