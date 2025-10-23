@@ -100,7 +100,7 @@ export default function SimpleKYC({ onComplete }: { onComplete: () => void }) {
       console.error('Camera access denied:', error)
       const errorMessage = error instanceof Error && error.name === 'NotAllowedError' 
         ? 'Camera access was denied. Please allow camera access in your browser settings and try again.'
-        : 'Camera is not available. Please ensure you have a working camera and try again.'
+        : 'Camera is not available. Ensure you have a working camera and try again.'
       alert(errorMessage)
       setShowCamera(false)
     }
