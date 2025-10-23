@@ -34,6 +34,7 @@ export default function SimpleKYC({ onComplete }: { onComplete: () => void }) {
     email: '',
     address: ''
   })
+  const [validationError, setValidationError] = useState<string | null>(null)
   const [documents, setDocuments] = useState<KYCDocument[]>([
     { id: '1', type: 'pan', file: null, status: 'pending' },
     { id: '2', type: 'aadhaar', file: null, status: 'pending' }
@@ -57,6 +58,15 @@ export default function SimpleKYC({ onComplete }: { onComplete: () => void }) {
   const documentTypes = {
     pan: { name: 'PAN Card', required: true },
     aadhaar: { name: 'Aadhaar Card', required: true }
+  }
+
+  // Dummy allowed users map: full name -> phone prefix (last 3 digits masked with X)
+  const allowedUsers: Record<string, string> = {
+    'Kaveen Krithik': '6385050255',
+    'Vedant Vadke': '7305465167',
+    'Adityasinh Chudasama': '7016704830',
+    'Vivek Roy': '7408332242',
+    'Sreevarsh Mahesh': '9342789265'
   }
 
   const handleFileUpload = (documentId: string, file: File) => {
@@ -313,13 +323,44 @@ export default function SimpleKYC({ onComplete }: { onComplete: () => void }) {
                 </div>
                 
                 <Button 
-                  onClick={() => setStep(2)} 
+                  onClick={() => {
+                    // Only validate name + phoneNumber against allowedUsers
+                    const name = formData.fullName.trim()
+                    const phone = formData.phoneNumber.replace(/[^0-9]/g, '') // keep digits only
+
+                    // Basic checks
+                    setValidationError(null)
+                    if (!name || !phone) {
+                      setValidationError('Please enter your full name and phone number.')
+                      return
+                    }
+
+                    const expectedPrefix = allowedUsers[name]
+                    if (!expectedPrefix) {
+                      setValidationError('Name not found in our records. KYC cannot proceed.')
+                      return
+                    }
+
+                    // Check that phone starts with the expected prefix OR contains it
+                    // Accept common formats: with country code or spaces
+                    if (!phone.startsWith(expectedPrefix) && !phone.includes(expectedPrefix)) {
+                      setValidationError('Phone number does not match the record for this name.')
+                      return
+                    }
+
+                    // Passed name+phone validation — proceed. UI for email/address unchanged.
+                    setValidationError(null)
+                    setStep(2)
+                  }}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   disabled={!formData.fullName || !formData.phoneNumber || !formData.email || !formData.address}
                 >
                   Continue to Documents
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
+                {validationError && (
+                  <p className="mt-2 text-sm text-red-400">{validationError}</p>
+                )}
               </div>
             )}
 
